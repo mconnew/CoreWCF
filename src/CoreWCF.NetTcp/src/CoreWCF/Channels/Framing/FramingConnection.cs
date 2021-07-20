@@ -359,7 +359,7 @@ namespace CoreWCF.Channels.Framing
             "Idle connection closed when waiting for reuse");
 
         private static Action<ILogger, Exception> s_receivedNullMessage = LoggerMessage.Define(
-            LogLevel.Information,
+            LogLevel.Debug,
             new EventId(1056, "ReceivedNullMessage"),
             "Null message received by transport");
 

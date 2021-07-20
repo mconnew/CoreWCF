@@ -207,6 +207,7 @@ namespace CoreWCF.Channels.Framing
                     {
                         // We have enough bytes to read the frame size from the first segment
                         var span = buffer.First.Span;
+                        Fx.Assert(span[1] == 3 && span[2] <= 3, "Invalid TLS header");
                         // The length in the Negotiate header doesn't include the header itself so that needs to be added
                         _frameSize = ((span[3] << 8) | span[4]) + 5;
                     }

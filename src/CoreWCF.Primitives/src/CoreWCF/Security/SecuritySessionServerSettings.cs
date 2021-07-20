@@ -605,7 +605,7 @@ namespace CoreWCF.Security
                     try
                     {
                         //TryCloseBinder(channelBinder, this.CloseTimeout); // Replacing this line with below (being proactive rather reactive(in WCF))
-                        ChannelBuilder.RemoveServiceDispatcher<IReplyChannel>(_sessionFilters[sessionId]);
+                        RemoveServiceDispatcher(sessionId);
                         SessionTokenCache.RemoveAllContexts(sessionId);
                     }
                     catch (CommunicationException e)
@@ -691,18 +691,23 @@ namespace CoreWCF.Security
         {
             lock (ThisGlobalLock)
             {
-                if (AcceptorChannelType == typeof(IReplyChannel))
-                {
-                    ChannelBuilder.RemoveServiceDispatcher<IReplyChannel>(_sessionFilters[sessionId]);
-                }
-                else if (AcceptorChannelType == typeof(IDuplexSessionChannel))
-                {
-                    ChannelBuilder.RemoveServiceDispatcher<IDuplexSessionChannel>(_sessionFilters[sessionId]);
-                }
+                RemoveServiceDispatcher(sessionId);
                 _activeSessions.Remove(sessionId);
                 _sessionFilters.Remove(sessionId);
             }
             //SecurityTraceRecordHelper.TraceActiveSessionRemoved(sessionId, this.Uri);
+        }
+
+        private void RemoveServiceDispatcher(UniqueId sessionId)
+        {
+            if (AcceptorChannelType == typeof(IReplyChannel))
+            {
+                ChannelBuilder.RemoveServiceDispatcher<IReplyChannel>(_sessionFilters[sessionId]);
+            }
+            else if (AcceptorChannelType == typeof(IDuplexSessionChannel))
+            {
+                ChannelBuilder.RemoveServiceDispatcher<IDuplexSessionChannel>(_sessionFilters[sessionId]);
+            }
         }
 
         public Task CloseAsync(TimeSpan timeout)
@@ -2554,7 +2559,7 @@ namespace CoreWCF.Security
             protected override Task OnOpenAsync(CancellationToken token) => throw new NotImplementedException();
         }
 
-        private class DuplexSessionRequestContext : RequestContextBase
+        internal class DuplexSessionRequestContext : RequestContextBase
         {
             private readonly IDuplexChannel _channel;
             public DuplexSessionRequestContext(IDuplexChannel channel, Message request)
@@ -2653,13 +2658,13 @@ namespace CoreWCF.Security
                 throw new NotImplementedException();
             }
 
-            public Task HandleDemuxFailureAsync(Message message, RequestContext faultContext)
+            public async Task HandleDemuxFailureAsync(Message message, RequestContext faultContext)
             {
                 HandleDemuxFailure(message);
                 Message faultMessage = CreateSessionDemuxFaultMessage(message);
                 try
                 {
-                    faultContext.ReplyAsync(faultMessage);
+                    await faultContext.ReplyAsync(faultMessage);
                 }
                 catch (Exception ex)
                 {
@@ -2672,7 +2677,6 @@ namespace CoreWCF.Security
                 {
                     faultMessage.Close();
                 }
-                return Task.CompletedTask;
             }
         }
     }
