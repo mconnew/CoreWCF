@@ -293,7 +293,7 @@ namespace CoreWCF.Channels
         }
     }
 
-    class DuplexSessionChannelDemuxer : SessionChannelDemuxer<IDuplexSessionChannel, Message>
+    internal class DuplexSessionChannelDemuxer : SessionChannelDemuxer<IDuplexSessionChannel, Message>
     {
         public DuplexSessionChannelDemuxer(BindingParameterCollection bindingParameters)//, TimeSpan peekTimeout, int maxPendingSessions)
             : base(bindingParameters)//, peekTimeout, maxPendingSessions)
@@ -325,7 +325,6 @@ namespace CoreWCF.Channels
                 {
                     var duplexSessionRequestContext = new DuplexSessionRequestContext(channel, message);
                     await DemuxFailureHandler.HandleDemuxFailureAsync(message, duplexSessionRequestContext);
-                    await DemuxFailureHandler.HandleDemuxFailureAsync(message);
                     abortItem = false;
                 }
 
@@ -345,7 +344,7 @@ namespace CoreWCF.Channels
             catch (Exception e)
             {
                 if (Fx.IsFatal(e)) throw;
-                throw e;
+                throw;
             }
             finally
             {
@@ -375,9 +374,9 @@ namespace CoreWCF.Channels
                 channel.OpenAsync();
             }
 
-            public async Task DispatchAsync(RequestContext context)
+            public Task DispatchAsync(RequestContext context)
             {
-                throw new NotImplementedException();
+                return Task.FromException(new NotImplementedException());
             }
 
             public async Task DispatchAsync(Message message)

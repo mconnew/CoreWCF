@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.Security.Authentication.ExtendedProtection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -175,11 +176,6 @@ namespace CoreWCF.Channels
                     await CloseOutputSessionCoreAsync(token);
                     OnOutputSessionClosed(token);
                     shouldFault = false;
-                    bool isDebug = false;
-                    if(isDebug)
-                    {
-                         await ReceiveAsync(token);
-                    }
                 }
                 finally
                 {
@@ -354,14 +350,14 @@ namespace CoreWCF.Channels
             }
         }
 
-        async Task EnsureInputClosedAsync(CancellationToken token)
+        private async Task EnsureInputClosedAsync(CancellationToken token)
         {
             Message message = await MessageSource.ReceiveAsync(token);
             if (message != null)
             {
                 using (message)
                 {
-                    ProtocolException error = ProtocolException.ReceiveShutdownReturnedNonNull(message);
+                    ProtocolException error = ReceiveShutdownReturnedNonNull(message);
                     throw TraceUtility.ThrowHelperError(error, message);
                 }
             }
@@ -432,6 +428,30 @@ namespace CoreWCF.Channels
         {
             string message = SR.Format(SR.CommunicationObjectFaulted1, GetCommunicationObjectType().ToString());
             return new CommunicationObjectFaultedException(message);
+        }
+
+        internal ProtocolException ReceiveShutdownReturnedNonNull(Message message)
+        {
+            if (message.IsFault)
+            {
+                try
+                {
+                    MessageFault fault = MessageFault.CreateFault(message, 64 * 1024);
+                    FaultReasonText reason = fault.Reason.GetMatchingTranslation(CultureInfo.CurrentCulture);
+                    string text = SR.Format(SR.ReceiveShutdownReturnedFault, reason.Text);
+                    return new ProtocolException(text);
+                }
+                catch (QuotaExceededException)
+                {
+                    string text = SR.Format(SR.ReceiveShutdownReturnedLargeFault, message.Headers.Action);
+                    return new ProtocolException(text);
+                }
+            }
+            else
+            {
+                string text = SR.Format(SR.ReceiveShutdownReturnedMessage, message.Headers.Action);
+                return new ProtocolException(text);
+            }
         }
 
         internal class ConnectionDuplexSession : IDuplexSession

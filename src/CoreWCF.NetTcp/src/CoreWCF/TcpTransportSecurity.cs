@@ -109,7 +109,7 @@ namespace CoreWCF
 
         internal BindingElement CreateTransportProtectionOnly()
         {
-            return this.CreateSslBindingElement(false);
+            return CreateSslBindingElement(false);
         }
 
         internal BindingElement CreateTransportProtectionAndAuthentication()

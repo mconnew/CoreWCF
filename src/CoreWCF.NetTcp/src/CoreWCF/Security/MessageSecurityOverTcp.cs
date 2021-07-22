@@ -26,35 +26,34 @@ namespace CoreWCF.Security
             _algorithmSuite = SecurityAlgorithmSuite.Default;
         }
 
-        
         public MessageCredentialType ClientCredentialType
         {
-            get { return this._clientCredentialType; }
+            get { return _clientCredentialType; }
             set
             {
                 if (!MessageCredentialTypeHelper.IsDefined(value))
                 {
                     throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(value)));
                 }
-                this._clientCredentialType = value;
+                _clientCredentialType = value;
             }
         }
 
         public SecurityAlgorithmSuite AlgorithmSuite
         {
-            get { return this._algorithmSuite; }
+            get { return _algorithmSuite; }
             set
             {
                 if (value == null)
                 {
                     throw DiagnosticUtility.ExceptionUtility.ThrowHelperArgumentNull(nameof(value));
                 }
-                this._algorithmSuite = value;
+                _algorithmSuite = value;
                 _wasAlgorithmSuiteSet = true;
             }
         }
 
-        internal bool WasAlgorithmSuiteSet => this._wasAlgorithmSuiteSet;
+        internal bool WasAlgorithmSuiteSet => _wasAlgorithmSuiteSet;
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public SecurityBindingElement CreateSecurityBindingElement(bool isSecureTransportMode, bool isReliableSession, BindingElement transportBindingElement)
@@ -63,7 +62,7 @@ namespace CoreWCF.Security
             SecurityBindingElement oneShotSecurity;
             if (isSecureTransportMode)
             {
-                switch (this._clientCredentialType)
+                switch (_clientCredentialType)
                 {
                     case MessageCredentialType.None:
                         throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new InvalidOperationException(SR.Format(SR.ClientCredentialTypeMustBeSpecifiedForMixedMode)));
@@ -115,7 +114,7 @@ namespace CoreWCF.Security
             }
 
             // set the algorithm suite and issued token params if required
-            result.DefaultAlgorithmSuite = oneShotSecurity.DefaultAlgorithmSuite = this.AlgorithmSuite;
+            result.DefaultAlgorithmSuite = oneShotSecurity.DefaultAlgorithmSuite = AlgorithmSuite;
 
             result.IncludeTimestamp = true;
             if (!isReliableSession)

@@ -493,29 +493,29 @@ namespace CoreWCF.Dispatcher
 
     internal abstract class SecurityDuplexChannel<UChannel> : IServiceChannelDispatcher where UChannel : class
     {
-        private readonly IDuplexChannel innerDuplexChannel;
+        private readonly IDuplexChannel _innerDuplexChannel;
         private readonly IServiceProvider _serviceProvider;
         public SecurityDuplexChannel(SecurityServiceDispatcher serviceDispatcher, IDuplexChannel innerChannel, SecurityProtocol securityProtocol, SecurityListenerSettingsLifetimeManager settingsLifetimeManager)
         //  : base(channelManager, innerChannel, securityProtocol, settingsLifetimeManager)
         {
-            innerDuplexChannel = innerChannel;
+            _innerDuplexChannel = innerChannel;
             SecurityProtocol = securityProtocol;
             _serviceProvider = InnerDuplexChannel.GetProperty<IServiceScopeFactory>().CreateScope().ServiceProvider;
         }
 
         public EndpointAddress RemoteAddress
         {
-            get { return this.innerDuplexChannel.RemoteAddress; }
+            get { return _innerDuplexChannel.RemoteAddress; }
         }
 
         public Uri Via
         {
-            get { return this.innerDuplexChannel.Via; }
+            get { return _innerDuplexChannel.Via; }
         }
 
         protected IDuplexChannel InnerDuplexChannel
         {
-            get { return this.innerDuplexChannel; }
+            get { return _innerDuplexChannel; }
         }
 
         internal SecurityProtocol SecurityProtocol { get; set; }
@@ -539,9 +539,9 @@ namespace CoreWCF.Dispatcher
         }
     }
 
-    sealed class SecurityDuplexSessionChannelDispatcher : SecurityDuplexChannel<IDuplexSessionChannel>, IDuplexSessionChannel
+    internal sealed class SecurityDuplexSessionChannelDispatcher : SecurityDuplexChannel<IDuplexSessionChannel>, IDuplexSessionChannel
     {
-        bool sendUnsecuredFaults;
+        private bool _sendUnsecuredFaults;
         private IServiceChannelDispatcher _serviceChannelDispatcher;
         public SecurityDuplexSessionChannelDispatcher(SecurityServiceDispatcher serviceDispatcher, IDuplexSessionChannel innerChannel, SecurityProtocol securityProtocol, SecurityListenerSettingsLifetimeManager settingsLifetimeManager)
             : base(serviceDispatcher, innerChannel, securityProtocol, settingsLifetimeManager)
@@ -631,13 +631,13 @@ namespace CoreWCF.Dispatcher
             return innerItem;
         }
 
-        void SendFaultIfRequired(Exception e, Message unverifiedMessage, TimeSpan timeout)
+        private void SendFaultIfRequired(Exception e, Message unverifiedMessage, TimeSpan timeout)
         {
-            if (!sendUnsecuredFaults)
+            if (!_sendUnsecuredFaults)
             {
                 return;
             }
-            MessageFault fault = SecurityUtils.CreateSecurityMessageFault(e, this.SecurityProtocol.SecurityProtocolFactory.StandardsManager);
+            MessageFault fault = SecurityUtils.CreateSecurityMessageFault(e, SecurityProtocol.SecurityProtocolFactory.StandardsManager);
             if (fault == null)
             {
                 return;
@@ -659,6 +659,7 @@ namespace CoreWCF.Dispatcher
         }
 
         public Task<(Message message, bool success)> TryReceiveAsync(CancellationToken token) => throw new NotImplementedException();
+        public Task<Message> ReceiveAsync(CancellationToken token) => throw new NotImplementedException();
     }
 
     internal sealed class SecurityRequestContext : RequestContextBase

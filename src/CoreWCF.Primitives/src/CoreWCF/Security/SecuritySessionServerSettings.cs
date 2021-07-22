@@ -1645,6 +1645,7 @@ namespace CoreWCF.Security
                     {
                         RemoteIdentity = EndpointIdentity.CreateIdentity(identityClaim);
                     }
+
                     _sessionTokenIdentifier = settings.IssuedSecurityTokenParameters.CreateKeyIdentifierClause(sessionToken, SecurityTokenReferenceStyle.External);
                     _standardsManager = settings.SessionProtocolFactory.StandardsManager;
                 }
@@ -1664,6 +1665,7 @@ namespace CoreWCF.Security
                     {
                         return false;
                     }
+
                     return _standardsManager.SecurityTokenSerializer.ReadKeyIdentifierClause(reader) is SecurityContextKeyIdentifierClause incomingTokenIdentifier && incomingTokenIdentifier.Matches(_securityContextTokenId, null);
                 }
             }
@@ -2035,7 +2037,7 @@ namespace CoreWCF.Security
             {
                 lock (LocalLock)
                 {
-                    if (this._closeResponseMessage != null)
+                    if (_closeResponseMessage != null)
                     {
                         _closeResponseMessage.Close();
                         _closeResponseMessage = null;
@@ -2077,6 +2079,7 @@ namespace CoreWCF.Security
                 {
                     return;
                 }
+
                 if (!didInputSessionClose)
                 {
                     throw DiagnosticUtility.ExceptionUtility.ThrowHelperWarning(new TimeoutException(SR.Format(SR.ServiceSecurityCloseTimeout, ServiceDefaults.CloseTimeout)));
@@ -2094,6 +2097,7 @@ namespace CoreWCF.Security
                 {
                     throw DiagnosticUtility.ExceptionUtility.ThrowHelperWarning(new TimeoutException(SR.Format(SR.ServiceSecurityCloseOutputSessionTimeout, ServiceDefaults.CloseTimeout)));
                 }
+
                 await CloseDuplexSessionChannelAsync(token);
                 await CloseCoreAsync(token);
                 Settings.RemoveSessionChannel(_session.Id);
@@ -2151,6 +2155,7 @@ namespace CoreWCF.Security
                     iterationTimeout = timeoutHelper.RemainingTime();
                     lastIteration = (iterationTimeout == TimeSpan.Zero);
                 }
+
                 _duplexSessionChannel.Abort();
             }
 
@@ -2181,6 +2186,7 @@ namespace CoreWCF.Security
                             sendClose = true;
                             _sentClose = true;
                         }
+
                         _outputSessionCloseHandle.Reset();
                     }
                 }
@@ -2354,6 +2360,7 @@ namespace CoreWCF.Security
                             throw TraceUtility.ThrowHelperWarning(error, message);
                         }
                     }
+
                     bool result = await _inputSessionCloseHandle.WaitAsync(timeoutHelper.RemainingTime(), false);
                     if (!result)
                     {
@@ -2369,6 +2376,7 @@ namespace CoreWCF.Security
                                 throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new InvalidOperationException(SR.Format(SR.ShutdownRequestWasNotReceived)));
                             }
                         }
+
                         return (true, wasAborted);
                     }
                 }
@@ -2378,8 +2386,10 @@ namespace CoreWCF.Security
                     {
                         throw;
                     }
+
                     wasAborted = true;
                 }
+
                 return (false, wasAborted);
             }
 
@@ -2418,6 +2428,7 @@ namespace CoreWCF.Security
                         {
                             throw;
                         }
+
                         pendingException = e;
                     }
                     if (pendingException != null)
@@ -2518,6 +2529,8 @@ namespace CoreWCF.Security
                     return IncomingChannel.SendAsync(message, token);
                 }
 
+                public Task<Message> ReceiveAsync(CancellationToken token) => throw new NotImplementedException();
+
                 public Task<(Message message, bool success)> TryReceiveAsync(CancellationToken token) => throw new NotImplementedException();
             }
 
@@ -2582,7 +2595,6 @@ namespace CoreWCF.Security
                 {
                     await _channel.SendAsync(message, token);
                 }
-
             }
         }
 
@@ -2650,6 +2662,7 @@ namespace CoreWCF.Security
                 {
                     faultMessage.InitializeReply(message);
                 }
+
                 return faultMessage;
             }
 

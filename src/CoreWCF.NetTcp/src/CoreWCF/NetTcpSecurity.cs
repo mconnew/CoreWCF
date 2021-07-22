@@ -70,7 +70,7 @@ namespace CoreWCF
             }
             else if (_mode == SecurityMode.TransportWithMessageCredential)
             {
-                return Message.CreateSecurityBindingElement(true, isReliableSessionEnabled, this.CreateTransportSecurity());
+                return Message.CreateSecurityBindingElement(true, isReliableSessionEnabled, CreateTransportSecurity());
             }
             else
             {

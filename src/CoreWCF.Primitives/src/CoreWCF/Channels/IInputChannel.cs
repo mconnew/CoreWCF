@@ -8,8 +8,8 @@ namespace CoreWCF.Channels
 {
     public interface IInputChannel : IChannel, ICommunicationObject
     {
-        Task<(Message message, bool success)> TryReceiveAsync(CancellationToken token);
-
         EndpointAddress LocalAddress { get; }
+        Task<Message> ReceiveAsync(CancellationToken token);
+        Task<(Message message, bool success)> TryReceiveAsync(CancellationToken token);
     }
 }
