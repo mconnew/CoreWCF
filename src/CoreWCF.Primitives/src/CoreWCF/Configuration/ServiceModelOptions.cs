@@ -8,19 +8,28 @@ namespace CoreWCF.Configuration
 {
     public class ServiceModelOptions
     {
-        private readonly Dictionary<Type, ServiceConfigurationBuilder> _config = new Dictionary<Type, ServiceConfigurationBuilder>();
+        private Dictionary<Type, ServiceConfigurationBuilder> _configBuilders = new Dictionary<Type, ServiceConfigurationBuilder>();
+
         public void ConfigureService(Type serviceType, Action<ServiceConfigurationBuilder> configure)
         {
-            if (!_config.TryGetValue(serviceType, out ServiceConfigurationBuilder configBuilder))
+            ServiceConfigurationBuilder configBuilder;
+            if (!_configBuilders.TryGetValue(serviceType, out configBuilder))
             {
                 configBuilder = new ServiceConfigurationBuilder(serviceType);
-                _config[serviceType] = configBuilder;
+                _configBuilders[serviceType] = configBuilder;
             }
-            configBuilder.AddConfigureDelegate(configure);
+
+            configBuilder.Configure(configure);
         }
+
+        public void ConfigureService<TService>(Action<ServiceConfigurationBuilder> configure)
+        {
+            ConfigureService(typeof(TService), configure);
+        }
+
         internal void ConfigureServiceBuilder(IServiceBuilder serviceBuilder)
         {
-            foreach (var serviceConfigBuilder in _config.Values)
+            foreach (var serviceConfigBuilder in _configBuilders.Values)
             {
                 serviceConfigBuilder.ConfigureServiceBuilder(serviceBuilder);
             }

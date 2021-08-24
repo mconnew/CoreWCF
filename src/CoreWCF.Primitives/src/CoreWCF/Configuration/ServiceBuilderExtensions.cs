@@ -16,12 +16,5 @@ namespace CoreWCF.Configuration
                 .GetRequiredService<ServiceConfigurationDelegateHolder<TService>>();
             holder.AddConfigDelegate(func);
         }
-
-        public static void ConfigureXmlConfigSupport(this IServiceBuilder builder)
-        {
-            var serviceBuilder = builder as ServiceBuilder;
-            var options = serviceBuilder.ServiceProvider.GetRequiredService<ServiceModelOptions>();
-            options.ConfigureServiceBuilder(builder);
-        }
     }
 }
