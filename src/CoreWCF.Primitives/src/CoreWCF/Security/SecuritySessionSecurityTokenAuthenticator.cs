@@ -1152,7 +1152,7 @@ namespace CoreWCF.Security
                 //end
 
                 var bindingQname = new XmlQualifiedName(binding.Name, binding.Namespace);
-                var channelDispatcher = new ChannelDispatcher(_listenUri, binding, bindingQname.ToString(), binding, endpointChannelTypes)
+                var channelDispatcher = new ChannelDispatcher(_listenUri, _listenUri, binding, bindingQname.ToString(), binding, endpointChannelTypes)
                 {
                     MessageVersion = binding.MessageVersion,
                     ManualAddressing = true

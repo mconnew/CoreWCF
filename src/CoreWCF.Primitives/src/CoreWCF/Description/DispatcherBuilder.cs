@@ -141,7 +141,7 @@ namespace CoreWCF.Description
         internal static ListenUriInfo GetListenUriInfoForEndpoint(ServiceHostBase host, ServiceEndpoint endpoint)
         {
             Uri listenUri = EnsureListenUri(host, endpoint);
-            return new ListenUriInfo(listenUri, endpoint.ListenUriMode);
+            return new ListenUriInfo(listenUri, endpoint.Address.Uri, endpoint.ListenUriMode);
         }
 
         internal static void InitializeServiceHost(ServiceHostBase serviceHost, IServiceProvider services)
@@ -174,6 +174,7 @@ namespace CoreWCF.Description
             foreach (KeyValuePair<ListenUriInfo, StuffPerListenUriInfo> stuff in stuffPerListenUriInfo)
             {
                 Uri listenUri = stuff.Key.ListenUri;
+                Uri originalUri = stuff.Key.OriginalUri;
                 ListenUriMode listenUriMode = stuff.Key.ListenUriMode;
                 BindingParameterCollection parameters = stuff.Value.Parameters;
                 Binding binding = stuff.Value.Endpoints[0].Binding;
@@ -213,7 +214,7 @@ namespace CoreWCF.Description
                 List<Type> channelTypes = GetSupportedChannelTypes(stuff.Value);
 
                 var bindingQname = new XmlQualifiedName(binding.Name, binding.Namespace);
-                var channelDispatcher = new ChannelDispatcher(listenUri, binding, bindingQname.ToString(), binding, channelTypes);
+                var channelDispatcher = new ChannelDispatcher(listenUri, originalUri, binding, bindingQname.ToString(), binding, channelTypes);
                 //channelDispatcher.SetEndpointAddressTable(endpointAddressTable);
                 stuff.Value.ChannelDispatcher = channelDispatcher;
 
@@ -792,13 +793,16 @@ namespace CoreWCF.Description
 
         internal class ListenUriInfo
         {
-            public ListenUriInfo(Uri listenUri, ListenUriMode listenUriMode)
+            public ListenUriInfo(Uri listenUri, Uri originalUri, ListenUriMode listenUriMode)
             {
                 ListenUri = listenUri;
+                OriginalUri = originalUri;
                 ListenUriMode = listenUriMode;
             }
 
             public Uri ListenUri { get; }
+
+            public Uri OriginalUri { get; }
 
             public ListenUriMode ListenUriMode { get; }
 

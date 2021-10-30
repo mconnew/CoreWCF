@@ -48,11 +48,12 @@ namespace CoreWCF.Dispatcher
             Initialize(shared);
         }
 
-        internal ChannelDispatcher(Uri listenUri, Binding binding, string bindingName, IDefaultCommunicationTimeouts timeouts, List<Type> supportedChannelTypes)
+        internal ChannelDispatcher(Uri listenUri, Uri originalUri, Binding binding, string bindingName, IDefaultCommunicationTimeouts timeouts, List<Type> supportedChannelTypes)
         {
             BindingName = bindingName;
             Binding = binding;
             ListenUri = listenUri;
+            OriginalUri = originalUri;
             SupportedChannelTypes = supportedChannelTypes;
             _timeouts = new ImmutableCommunicationTimeouts(timeouts);
             Initialize(new SharedRuntimeState(true));
@@ -233,6 +234,8 @@ namespace CoreWCF.Dispatcher
                 }
             }
         }
+
+        internal Uri OriginalUri { get; }
 
         internal Uri ListenUri { get; }
 

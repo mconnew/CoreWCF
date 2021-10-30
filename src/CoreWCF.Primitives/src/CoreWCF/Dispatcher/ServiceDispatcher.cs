@@ -20,7 +20,7 @@ namespace CoreWCF.Dispatcher
             _requestReplyCorrelator = new RequestReplyCorrelator();
         }
 
-        public Uri BaseAddress => ChannelDispatcher.ListenUri;
+        public Uri BaseAddress => ChannelDispatcher.OriginalUri;
 
         public Binding Binding => ChannelDispatcher.Binding;
 

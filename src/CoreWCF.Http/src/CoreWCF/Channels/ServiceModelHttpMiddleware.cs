@@ -36,16 +36,16 @@ namespace CoreWCF.Channels
         public async Task InvokeAsync(HttpContext context)
         {
             // Update the path
-            var path = context.Request.Path;
-            var pathBase = context.Request.PathBase;
-            context.Request.Path = pathBase.Add(path);
-            context.Request.PathBase = "";
-            Action restorePaths = () =>
-            {
-                context.Request.PathBase = pathBase;
-                context.Request.Path = path;
-            };
-            context.Items[RestorePathsDelegateItemName] = restorePaths;
+            //var path = context.Request.Path;
+            //var pathBase = context.Request.PathBase;
+            //context.Request.Path = pathBase.Add(path);
+            //context.Request.PathBase = "";
+            //Action restorePaths = () =>
+            //{
+            //    context.Request.PathBase = pathBase;
+            //    context.Request.Path = path;
+            //};
+            //context.Items[RestorePathsDelegateItemName] = restorePaths;
             await _branch(context);
         }
 
@@ -161,7 +161,7 @@ namespace CoreWCF.Channels
                     }
 
                     _logger.LogInformation($"Mapping CoreWCF branch app for path {dispatcher.BaseAddress.AbsolutePath}");
-                    branchApp.Map(dispatcher.BaseAddress.AbsolutePath, wcfApp =>
+                    branchApp.PathMap(dispatcher.BaseAddress.OriginalString, wcfApp =>
                     {
                         IServiceScopeFactory servicesScopeFactory = wcfApp.ApplicationServices.GetRequiredService<IServiceScopeFactory>();
                         var requestHandler = new RequestDelegateHandler(serviceDispatcher, servicesScopeFactory);
@@ -176,14 +176,14 @@ namespace CoreWCF.Channels
 
             branchApp.Use(_ => { return reqContext =>
             {
-                if (reqContext.Items.TryGetValue(RestorePathsDelegateItemName, out object restorePathsDelegateAsObject))
-                {
-                    (restorePathsDelegateAsObject as Action)?.Invoke();
-                }
-                else
-                {
-                    _logger.LogWarning("RequestContext missing delegate with key " + RestorePathsDelegateItemName);
-                }
+                //if (reqContext.Items.TryGetValue(RestorePathsDelegateItemName, out object restorePathsDelegateAsObject))
+                //{
+                //    (restorePathsDelegateAsObject as Action)?.Invoke();
+                //}
+                //else
+                //{
+                //    _logger.LogWarning("RequestContext missing delegate with key " + RestorePathsDelegateItemName);
+                //}
 
                 return _next(reqContext);
             }; });
