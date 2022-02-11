@@ -221,7 +221,6 @@ namespace CoreWCF.Description
                 for (int i = 0; i < stuff.Value.Endpoints.Count; i++)
                 {
                     ServiceEndpoint endpoint = stuff.Value.Endpoints[i];
-                    string viaString = listenUri.AbsoluteUri;
 
                     //EndpointFilterProvider provider = new EndpointFilterProvider();
                     EndpointDispatcher dispatcher = BuildEndpointDispatcher(description, endpoint);
@@ -679,6 +678,15 @@ namespace CoreWCF.Description
             ServiceHostObjectModel<TService> serviceHost;
             serviceHost = services.GetRequiredService<ServiceHostObjectModel<TService>>();
 
+            ServiceConfigurationDelegateHolder<TService> configDelegate = services.GetService<ServiceConfigurationDelegateHolder<TService>>();
+            var options = new ServiceOptions<TService>(serviceHost);
+            foreach (var serverUriAddress in serverUriAddresses)
+            {
+                options.BaseAddresses.Add(serverUriAddress);
+            }
+
+            options.ApplyOptions(configDelegate);
+
             // TODO: Create internal behavior which configures any extensibilities which exist in serviceProvider, eg IMessageInspector
             foreach (ServiceEndpointConfiguration endpointConfig in serviceConfig.Endpoints)
             {
@@ -697,7 +705,6 @@ namespace CoreWCF.Description
                 serviceHost.Description.Endpoints.Add(serviceEndpoint);
             }
 
-            ServiceConfigurationDelegateHolder<TService> configDelegate = services.GetService<ServiceConfigurationDelegateHolder<TService>>();
             configDelegate?.Configure(serviceHost);
             InitializeServiceHost(serviceHost, services);
 
