@@ -175,7 +175,6 @@ namespace CoreWCF.Description
             foreach (KeyValuePair<ListenUriInfo, StuffPerListenUriInfo> stuff in stuffPerListenUriInfo)
             {
                 Uri listenUri = stuff.Key.ListenUri;
-                ListenUriMode listenUriMode = stuff.Key.ListenUriMode;
                 BindingParameterCollection parameters = stuff.Value.Parameters;
                 Binding binding = stuff.Value.Endpoints[0].Binding;
                 EndpointIdentity identity = stuff.Value.Endpoints[0].Address.Identity;

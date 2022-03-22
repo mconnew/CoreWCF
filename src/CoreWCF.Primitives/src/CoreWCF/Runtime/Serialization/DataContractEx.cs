@@ -13,36 +13,65 @@ namespace CoreWCF.Runtime.Serialization
 {
     internal class DataContractEx
     {
-        private object _wrappedDataContract;
+        private static readonly Dictionary<Type, XmlQualifiedName> s_typeToName = new Dictionary<Type, XmlQualifiedName>
+        {
+            [typeof(sbyte)] = new XmlQualifiedName("byte", XmlSchema.Namespace),
+            [typeof(byte)] = new XmlQualifiedName("unsignedByte", XmlSchema.Namespace),
+            [typeof(short)] = new XmlQualifiedName("short", XmlSchema.Namespace),
+            [typeof(ushort)] = new XmlQualifiedName("unsignedShort", XmlSchema.Namespace),
+            [typeof(int)] = new XmlQualifiedName("int", XmlSchema.Namespace),
+            [typeof(uint)] = new XmlQualifiedName("unsignedInt", XmlSchema.Namespace),
+            [typeof(long)] = new XmlQualifiedName("long", XmlSchema.Namespace),
+            [typeof(ulong)] = new XmlQualifiedName("unsignedLong", XmlSchema.Namespace)
+        };
 
-        private DataContractEx(object dataContract) => _wrappedDataContract = dataContract;
+        private DataContractEx(object dataContract, Type dataType)
+        {
+            WrappedDataContract = dataContract;
+            if (WrappedDataContract.GetType().Equals(s_enumDataContractType))
+            {
+                FixupEnumDataContract(dataType);
+            }
+        }
 
-        public Type UnderlyingType => s_getUnderlyingType(_wrappedDataContract);
-        public XmlQualifiedName StableName => s_getStableName(_wrappedDataContract);
-        public XmlDictionaryString TopLevelElementName => s_getTopLevelElementName(_wrappedDataContract);
-        public XmlDictionaryString TopLevelElementNamespace => s_getTopLevelElementNamespace(_wrappedDataContract);
-        public bool HasRoot => s_getHasRoot(_wrappedDataContract);
-        public bool IsXmlDataContract => _wrappedDataContract.GetType() == s_xmlDataContractType;
-        public bool XmlDataContractIsAnonymous => s_getXmlDataContractIsAnonymous(_wrappedDataContract);
-        public XmlSchemaType XmlDataContractXsdType => s_getXmlDataContractXsdType(_wrappedDataContract);
+        private void FixupEnumDataContract(Type dataType)
+        {
+            Fx.Assert(dataType.IsEnum, "EnumDataContract should only be created for an enum type");
+            var underlyingType = Enum.GetUnderlyingType(dataType);
+            var baseContractName = s_typeToName[underlyingType];
+            s_setEnumBaseContractName(WrappedDataContract, baseContractName);
+        }
+
+        public object WrappedDataContract { get; }
+
+        public Type UnderlyingType => s_getUnderlyingType(WrappedDataContract);
+        public XmlQualifiedName StableName => s_getStableName(WrappedDataContract);
+        public XmlDictionaryString TopLevelElementName => s_getTopLevelElementName(WrappedDataContract);
+        public XmlDictionaryString TopLevelElementNamespace => s_getTopLevelElementNamespace(WrappedDataContract);
+        public bool HasRoot => s_getHasRoot(WrappedDataContract);
+        public bool IsXmlDataContract => WrappedDataContract.GetType() == s_xmlDataContractType;
+        public bool XmlDataContractIsAnonymous => s_getXmlDataContractIsAnonymous(WrappedDataContract);
+        public XmlSchemaType XmlDataContractXsdType => s_getXmlDataContractXsdType(WrappedDataContract);
 
         internal static Func<Type, DataContractEx> GetDataContract { private set; get; } = GetDataContractStub;
 
-        private static Type s_dataContractType = typeof(DataContractSerializer).Assembly.GetType("System.Runtime.Serialization.DataContract");
+        internal static Type DataContractType => typeof(DataContractSerializer).Assembly.GetType("System.Runtime.Serialization.DataContract");
         private static Type s_xmlDataContractType = typeof(DataContractSerializer).Assembly.GetType("System.Runtime.Serialization.XmlDataContract");
-        private static Func<object, Type> s_getUnderlyingType = ReflectionHelper.GetPropertyDelegate<Type>(s_dataContractType, "UnderlyingType");
-        private static Func<object, XmlQualifiedName> s_getStableName = ReflectionHelper.GetPropertyDelegate<XmlQualifiedName>(s_dataContractType, "StableName");
-        private static Func<object, XmlDictionaryString> s_getTopLevelElementName = ReflectionHelper.GetPropertyDelegate<XmlDictionaryString>(s_dataContractType, "TopLevelElementName");
-        private static Func<object, XmlDictionaryString> s_getTopLevelElementNamespace = ReflectionHelper.GetPropertyDelegate<XmlDictionaryString>(s_dataContractType, "TopLevelElementNamespace");
-        private static Func<object, bool> s_getHasRoot = ReflectionHelper.GetPropertyDelegate<bool>(s_dataContractType, "HasRoot");
+        private static Type s_enumDataContractType = typeof(DataContractSerializer).Assembly.GetType("System.Runtime.Serialization.EnumDataContract");
+        private static Func<object, Type> s_getUnderlyingType = ReflectionHelper.GetPropertyDelegate<Type>(DataContractType, "UnderlyingType");
+        private static Func<object, XmlQualifiedName> s_getStableName = ReflectionHelper.GetPropertyDelegate<XmlQualifiedName>(DataContractType, "StableName");
+        private static Func<object, XmlDictionaryString> s_getTopLevelElementName = ReflectionHelper.GetPropertyDelegate<XmlDictionaryString>(DataContractType, "TopLevelElementName");
+        private static Func<object, XmlDictionaryString> s_getTopLevelElementNamespace = ReflectionHelper.GetPropertyDelegate<XmlDictionaryString>(DataContractType, "TopLevelElementNamespace");
+        private static Func<object, bool> s_getHasRoot = ReflectionHelper.GetPropertyDelegate<bool>(DataContractType, "HasRoot");
         private static Func<object, bool> s_getXmlDataContractIsAnonymous = ReflectionHelper.GetPropertyDelegate<bool>(s_xmlDataContractType, "IsAnonymous");
         private static Func<object, XmlSchemaType> s_getXmlDataContractXsdType = ReflectionHelper.GetPropertyDelegate<XmlSchemaType>(s_xmlDataContractType, "XsdType");
+        private static Action<object, XmlQualifiedName> s_setEnumBaseContractName = ReflectionHelper.SetPropertyDelegate<XmlQualifiedName>(s_enumDataContractType, "BaseContractName");
 
         private static DataContractEx GetDataContractStub(Type clrType)
         {
-            var methodInfo = s_dataContractType.GetMethod("GetDataContract", BindingFlags.Static | BindingFlags.NonPublic, null, new Type[] { typeof(Type) }, null);
+            var methodInfo = DataContractType.GetMethod("GetDataContract", BindingFlags.Static | BindingFlags.NonPublic, null, new Type[] { typeof(Type) }, null);
             var getDataContractDelegate = ReflectionHelper.CreateStaticMethodCallLambda<Type, object>(methodInfo);
-            Func<Type, DataContractEx> wrappingDelegate = (Type type) => new DataContractEx(getDataContractDelegate(type));
+            Func<Type, DataContractEx> wrappingDelegate = (Type type) => new DataContractEx(getDataContractDelegate(type), type);
             GetDataContract = wrappingDelegate;
             return GetDataContract(clrType);
         }

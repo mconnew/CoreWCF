@@ -4,18 +4,15 @@
 using System;
 using System.Xml;
 using System.Xml.Schema;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Reflection;
-using System.Diagnostics;
 using System.Runtime.Serialization;
 
 namespace CoreWCF.Runtime.Serialization
 {
     internal class XsdDataContractExporterEx
     {
-        XmlSchemaSet schemas;
-        DataContractSetEx dataContractSet;
+        XmlSchemaSet _schemas;
+        DataContractSetEx _dataContractSet;
 
         public XsdDataContractExporterEx()
         {
@@ -23,28 +20,28 @@ namespace CoreWCF.Runtime.Serialization
 
         public XsdDataContractExporterEx(XmlSchemaSet schemas)
         {
-            this.schemas = schemas;
+            _schemas = schemas;
         }
 
         XmlSchemaSet GetSchemaSet()
         {
-            if (schemas == null)
+            if (_schemas == null)
             {
-                schemas = new XmlSchemaSet();
-                schemas.XmlResolver = null;
+                _schemas = new XmlSchemaSet();
+                _schemas.XmlResolver = null;
             }
-            return schemas;
+            return _schemas;
         }
 
         DataContractSetEx DataContractSet
         {
             get
             {
-                if (dataContractSet == null)
+                if (_dataContractSet == null)
                 {
-                    dataContractSet = new DataContractSetEx();
+                    _dataContractSet = new DataContractSetEx();
                 }
-                return dataContractSet;
+                return _dataContractSet;
             }
         }
 
@@ -53,7 +50,7 @@ namespace CoreWCF.Runtime.Serialization
             if (type == null)
                 throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentNullException(nameof(type)));
 
-            DataContractSetEx oldValue = (dataContractSet == null) ? null : new DataContractSetEx(dataContractSet);
+            DataContractSetEx oldValue = (_dataContractSet == null) ? null : new DataContractSetEx(_dataContractSet);
             try
             {
                 AddType(type);
@@ -66,7 +63,7 @@ namespace CoreWCF.Runtime.Serialization
                     throw;
                 }
 
-                dataContractSet = oldValue;
+                _dataContractSet = oldValue;
                 throw;
             }
         }

@@ -137,7 +137,7 @@ namespace CoreWCF.Xml.Serialization
             if (ns == referencingNs) return;
             XmlSchema schema = schemas[referencingNs];
             if (schema == null) throw new InvalidOperationException(SR.Format(SR.XmlMissingSchema, referencingNs));
-            if (ns != null && ns.Length > 0 && FindImport(schema, ns) == null)
+            if (ns.Length > 0 && FindImport(schema, ns) == null)
             {
                 XmlSchemaImport import = new XmlSchemaImport();
                 import.Namespace = ns;

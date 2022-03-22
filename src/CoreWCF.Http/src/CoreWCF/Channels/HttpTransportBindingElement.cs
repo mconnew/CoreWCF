@@ -394,7 +394,7 @@ namespace CoreWCF.Channels
                     assertionNames.Add(TransportPolicyConstants.BasicHttpAuthenticationName);
                 }
 
-                if (assertionNames != null && assertionNames.Count > 0)
+                if (assertionNames.Count > 0)
                 {
                     if (assertionNames.Count == 1)
                     {

@@ -2,7 +2,7 @@
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Target Name="GenerateResourcesSource" 
       Inputs="$(StringResourcesPath);$(CommonStringResourcesPath)"
-      Outputs="$(IntermediateResOutputFileFullPath),$(IntermediateCommonResOutputFileFullPath)"
+      Outputs="$(IntermediateResOutputFileFullPath);$(IntermediateCommonResOutputFileFullPath)"
       BeforeTargets="BeforeCompile">
 
     <GenerateStringResources ResxFilePath="$(StringResourcesPath)" GeneratedSourceOutputPath="$(IntermediateResOutputFileFullPath)" AssemblyName="$(AssemblyName)" ClassName="SR"/>

@@ -26,6 +26,14 @@ namespace CoreWCF.Runtime.Serialization
             return CreateInstanceMethodCallLambda<TInstance, TProp>(propertyGetter);
         }
 
+        internal static Action<object, TProp> SetPropertyDelegate<TProp>(Type declaringType, string propertyName)
+        {
+            Fx.Assert(declaringType != null, "declaringType can't be null");
+            var propertyInfo = declaringType.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            Fx.Assert(propertyInfo != null, $"Type {declaringType.Name} doesn't have a property called {propertyName}");
+            var propertySetter = propertyInfo.GetSetMethod(nonPublic: true);
+            return CreateVoidInstanceMethodCallWithParamLambda<TProp>(propertySetter, declaringType);
+        }
 
         internal static Func<TParam, TReturn> CreateStaticMethodCallLambda<TParam, TReturn>(MethodInfo methodInfo)
         {
@@ -36,6 +44,7 @@ namespace CoreWCF.Runtime.Serialization
             {
                 callExpr = Expression.Convert(callExpr, typeof(TReturn));
             }
+
             var lambdaExpr = Expression.Lambda<Func<TParam, TReturn>>(callExpr, paramExpression);
             return lambdaExpr.Compile();
         }
@@ -49,6 +58,7 @@ namespace CoreWCF.Runtime.Serialization
             {
                 callExpr = Expression.Convert(callExpr, typeof(TReturn));
             }
+
             var lambdaExpr = Expression.Lambda<Func<object, TReturn>>(callExpr, instanceObjParamExpr);
             return lambdaExpr.Compile();
         }
@@ -61,7 +71,18 @@ namespace CoreWCF.Runtime.Serialization
             {
                 callExpr = Expression.Convert(callExpr, typeof(TReturn));
             }
+
             var lambdaExpr = Expression.Lambda<Func<TInstance, TReturn>>(callExpr, instanceParamExpr);
+            return lambdaExpr.Compile();
+        }
+
+        internal static Action<object, TParam> CreateVoidInstanceMethodCallWithParamLambda<TParam>(MethodInfo methodInfo, Type instanceType)
+        {
+            var instanceObjParamExpr = Expression.Parameter(typeof(object), "instance");
+            var typeInstanceExpr = Expression.Convert(instanceObjParamExpr, instanceType);
+            var firstParamParamExpr = Expression.Parameter(typeof(TParam), "param");
+            Expression callExpr = Expression.Call(typeInstanceExpr, methodInfo, firstParamParamExpr);
+            var lambdaExpr = Expression.Lambda<Action<object, TParam>>(callExpr, instanceObjParamExpr, firstParamParamExpr);
             return lambdaExpr.Compile();
         }
     }

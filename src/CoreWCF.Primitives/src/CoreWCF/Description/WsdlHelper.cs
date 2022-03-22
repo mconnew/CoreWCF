@@ -155,7 +155,7 @@ namespace CoreWCF.Description
             foreach (XmlElement policyElement in bindingPolicies)
             {
                 XmlNode policyId = policyElement.Attributes.GetNamedItem(MetadataStrings.Wsu.Attributes.Id, MetadataStrings.Wsu.NamespaceUri);
-                string policyIdString = policyId.Value;
+                string policyIdString = policyId?.Value;
                 string policyIdStringWithOldBindingName = string.Format(CultureInfo.InvariantCulture, policyIdStringPrefixFormat, oldBindingName);
                 string policyIdStringWithNewBindingName = string.Format(CultureInfo.InvariantCulture, policyIdStringPrefixFormat, newBindingName);
                 if (policyId != null && policyIdString != null && policyIdString.StartsWith(policyIdStringWithOldBindingName, StringComparison.Ordinal))
@@ -193,7 +193,7 @@ namespace CoreWCF.Description
             foreach (XmlElement policyReferenceElement in bindingPolicyReferences)
             {
                 XmlNode policyReference = policyReferenceElement.Attributes.GetNamedItem(MetadataStrings.WSPolicy.Attributes.URI);
-                string policyReferenceValue = policyReference.Value;
+                string policyReferenceValue = policyReference?.Value;
                 string policyReferenceValueWithOldBindingName = string.Format(CultureInfo.InvariantCulture, policyReferencePrefixFormat, oldBindingName);
                 string policyReferenceValueWithNewBindingName = string.Format(CultureInfo.InvariantCulture, policyReferencePrefixFormat, newBindingName);
                 if (policyReference != null && policyReferenceValue != null && policyReferenceValue.StartsWith(policyReferenceValueWithOldBindingName, StringComparison.Ordinal))

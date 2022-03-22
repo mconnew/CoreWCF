@@ -1034,7 +1034,6 @@ namespace CoreWCF.Description
             {
                 bool WsdlBindingQNameExistsImpl(string localName, object nameCollection)
                 {
-                    XmlQualifiedName wsdlBindingQName = new XmlQualifiedName(localName, bindingWsdlNamespace);
                     WsdlNS.ServiceDescription wsdl = exporter.GeneratedWsdlDocuments[bindingWsdlNamespace];
                     if (wsdl != null && wsdl.Bindings[localName] != null)
                     {

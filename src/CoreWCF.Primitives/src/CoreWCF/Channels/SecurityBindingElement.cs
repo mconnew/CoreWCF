@@ -970,13 +970,10 @@ namespace CoreWCF.Channels
                 }
             }
 
-            XmlElement transportTokenAssertion = transportTokenAssertionProvider.GetTransportTokenAssertion();
+            XmlElement transportTokenAssertion = transportTokenAssertionProvider?.GetTransportTokenAssertion();
 
             if (transportTokenAssertion == null)
-            {
-                if (transportTokenAssertion == null)
-                    throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new InvalidOperationException(SR.Format(SR.NoTransportTokenAssertionProvided, transportTokenAssertionProvider.GetType().ToString())));
-            }
+                throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new InvalidOperationException(SR.Format(SR.NoTransportTokenAssertionProvided, transportTokenAssertionProvider.GetType().ToString())));
 
             AddressingVersion addressingVersion = AddressingVersion.WSAddressing10;
             MessageEncodingBindingElement messageEncoderBindingElement = policyContext.BindingElements.Find<MessageEncodingBindingElement>();

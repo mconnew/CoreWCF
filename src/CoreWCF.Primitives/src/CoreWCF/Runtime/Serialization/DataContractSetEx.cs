@@ -35,8 +35,10 @@ namespace CoreWCF.Runtime.Serialization
 
         internal void Add(Type type)
         {
-            var addTypeMethodInfo = s_dataContractSetType.GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { typeof(Type) }, null);
-            addTypeMethodInfo.Invoke(Wrapped, new object[] { type });
+            var dataContract = DataContractEx.GetDataContract(type);
+            EnsureTypeNotGeneric(dataContract.UnderlyingType);
+            var addTypeMethodInfo = s_dataContractSetType.GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic, null, new Type[] { DataContractEx.DataContractType }, null);
+            addTypeMethodInfo.Invoke(Wrapped, new object[] { dataContract.WrappedDataContract });
         }
 
         internal static void EnsureTypeNotGeneric(Type type)
