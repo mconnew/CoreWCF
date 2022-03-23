@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Net;
 using System.Threading.Tasks;
 using CoreWCF.Configuration;
 using CoreWCF.Description;
@@ -15,12 +16,12 @@ namespace CoreWCF.Channels
     internal class MetadataMiddleware
     {
         private const string RestorePathsDelegateItemName = nameof(MetadataMiddleware) + "_RestorePathsDelegate";
-        private IApplicationBuilder _app;
+        private readonly IApplicationBuilder _app;
         private readonly IServiceBuilder _serviceBuilder;
         private readonly IDispatcherBuilder _dispatcherBuilder;
-        private ServiceMetadataBehavior _metadataBehavior;
-        private RequestDelegate _next;
-        private ILogger<MetadataMiddleware> _logger;
+        private readonly ServiceMetadataBehavior _metadataBehavior;
+        private readonly RequestDelegate _next;
+        private readonly ILogger<MetadataMiddleware> _logger;
         private RequestDelegate _branch;
         private bool _branchBuilt;
 
@@ -105,23 +106,10 @@ namespace CoreWCF.Channels
 
             foreach (Type serviceType in _serviceBuilder.Services)
             {
-                void MapMetadata(IApplicationBuilder app, string path, Action<IApplicationBuilder> configure)
+                void MapMetadata(IApplicationBuilder app, string path, Func<RequestDelegate, RequestDelegate> middleware)
                 {
-                    if (path.EndsWith("/"))
-                    {
-                        path = path.Substring(0, path.Length - 1);
-                    }
-
-                    if (string.IsNullOrEmpty(path) )
-                    {
-                        _logger.LogInformation($"Configuring metadata /");
-                        configure(app);
-                    }
-                    else
-                    {
-                        _logger.LogInformation($"Configuring metadata to {path}");
-                        app.Map(path, configure);
-                    }
+                    _logger.LogInformation($"Configuring metadata to {path}");
+                    app.Use(middleware);
                 }
 
                 var dispatchers = _dispatcherBuilder.BuildDispatchers(serviceType);
@@ -141,12 +129,42 @@ namespace CoreWCF.Channels
                     if (fallbackHttpEndpointAddress == null && Uri.UriSchemeHttp.Equals(scheme))
                     {
                         fallbackHttpEndpointAddress = dispatcher.BaseAddress;
+                        if (IPAddress.TryParse(fallbackHttpEndpointAddress.Host, out IPAddress hostAsAddress))
+                        {
+                            var uriBuilder = new UriBuilder(fallbackHttpEndpointAddress);
+                            if (hostAsAddress.Equals(IPAddress.Any) || hostAsAddress.Equals(IPAddress.IPv6Any))
+                            {
+                                uriBuilder.Host = DnsCache.MachineName;
+                                fallbackHttpEndpointAddress = uriBuilder.Uri;
+                            }
+                            else if (IPAddress.IsLoopback(hostAsAddress))
+                            {
+                                uriBuilder.Host = "localhost";
+                                fallbackHttpEndpointAddress = uriBuilder.Uri;
+                            }
+                        }
+
                         continue;
                     }
 
                     if (fallbackHttpsEndpointAddress == null && Uri.UriSchemeHttps.Equals(scheme))
                     {
                         fallbackHttpsEndpointAddress = dispatcher.BaseAddress;
+                        if (IPAddress.TryParse(fallbackHttpsEndpointAddress.Host, out IPAddress hostAsAddress))
+                        {
+                            var uriBuilder = new UriBuilder(fallbackHttpsEndpointAddress);
+                            if (hostAsAddress.Equals(IPAddress.Any) || hostAsAddress.Equals(IPAddress.IPv6Any))
+                            {
+                                uriBuilder.Host = DnsCache.MachineName;
+                                fallbackHttpsEndpointAddress = uriBuilder.Uri;
+                            }
+                            else if (IPAddress.IsLoopback(hostAsAddress))
+                            {
+                                uriBuilder.Host = "localhost";
+                                fallbackHttpsEndpointAddress = uriBuilder.Uri;
+                            }
+                        }
+
                         continue;
                     }
                 }
@@ -162,11 +180,12 @@ namespace CoreWCF.Channels
                     else
                     {
                         httpMetadataUri = fallbackHttpEndpointAddress;
+                        metadataExtension.HttpGetUrl = fallbackHttpEndpointAddress;
                     }
 
                     if(httpMetadataUri != null)
                     {
-                        MapMetadata(branchApp, httpMetadataUri.AbsolutePath, metadataExtension.ConfigureWith(httpMetadataUri, false));
+                        MapMetadata(branchApp, httpMetadataUri.AbsolutePath, metadataExtension.CreateMiddleware(httpMetadataUri, false));
                     }
                 }
 
@@ -180,11 +199,12 @@ namespace CoreWCF.Channels
                     else
                     {
                         helpPageUri = fallbackHttpEndpointAddress;
+                        metadataExtension.HttpHelpPageUrl = fallbackHttpEndpointAddress;
                     }
                     if (helpPageUri != null && !helpPageUri.Equals(httpMetadataUri))
                     {
                         // Only map the help page uri if it's not null, and different from http metadata uri.
-                        MapMetadata(branchApp, helpPageUri.AbsolutePath, metadataExtension.ConfigureWith(helpPageUri, false));
+                        MapMetadata(branchApp, helpPageUri.AbsolutePath, metadataExtension.CreateMiddleware(helpPageUri, false));
                     }
                 }
 
@@ -197,11 +217,12 @@ namespace CoreWCF.Channels
                     else
                     {
                         httpsMetadataUri = fallbackHttpsEndpointAddress;
+                        metadataExtension.HttpsGetUrl = fallbackHttpsEndpointAddress;
                     }
 
                     if (httpsMetadataUri != null)
                     {
-                        MapMetadata(branchApp, httpsMetadataUri.AbsolutePath, metadataExtension.ConfigureWith(httpsMetadataUri, true));
+                        MapMetadata(branchApp, httpsMetadataUri.AbsolutePath, metadataExtension.CreateMiddleware(httpsMetadataUri, true));
                     }
                 }
 
@@ -215,11 +236,12 @@ namespace CoreWCF.Channels
                     else
                     {
                         helpPageUri = fallbackHttpsEndpointAddress;
+                        metadataExtension.HttpsHelpPageUrl = fallbackHttpsEndpointAddress;
                     }
                     if (helpPageUri != null && !helpPageUri.Equals(httpsMetadataUri))
                     {
                         // Only map the help page uri if it's not null, and different from https metadata uri.
-                        MapMetadata(branchApp, helpPageUri.AbsolutePath, metadataExtension.ConfigureWith(helpPageUri, true));
+                        MapMetadata(branchApp, helpPageUri.AbsolutePath, metadataExtension.CreateMiddleware(helpPageUri, true));
                     }
                 }
             }

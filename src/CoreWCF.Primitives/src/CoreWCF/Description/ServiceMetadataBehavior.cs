@@ -20,7 +20,6 @@ namespace CoreWCF.Description
     {
         public const string MexContractName = "IMetadataExchange";
         internal const string MexContractNamespace = "http://schemas.microsoft.com/2006/04/mex";
-        private static readonly Uri s_emptyUri = new Uri(String.Empty, UriKind.Relative);
         private Uri _httpGetUrl;
         private Uri _httpsGetUrl;
         private Uri _externalMetadataLocation = null;
@@ -96,7 +95,7 @@ namespace CoreWCF.Description
             }
         }
 
-        static internal ContractDescription MexContract
+        internal static ContractDescription MexContract
         {
             get
             {
@@ -126,7 +125,7 @@ namespace CoreWCF.Description
 
         private void ApplyBehavior(ServiceDescription description, ServiceHostBase host)
         {
-            ServiceMetadataExtension mex = ServiceMetadataExtension.EnsureServiceMetadataExtension(description, host);
+            ServiceMetadataExtension mex = ServiceMetadataExtension.EnsureServiceMetadataExtension(host);
             SetExtensionProperties(description, host, mex);
         }
 
@@ -137,8 +136,8 @@ namespace CoreWCF.Description
             mex.HttpGetEnabled = HttpGetEnabled;
             mex.HttpsGetEnabled = HttpsGetEnabled;
 
-            mex.HttpGetUrl = host.GetVia(Uri.UriSchemeHttp, _httpGetUrl == null ? new Uri(string.Empty, UriKind.Relative) : _httpGetUrl);
-            mex.HttpsGetUrl = host.GetVia(Uri.UriSchemeHttps, _httpsGetUrl == null ? new Uri(string.Empty, UriKind.Relative) : _httpsGetUrl);
+            mex.HttpGetUrl = host.GetVia(Uri.UriSchemeHttp, _httpGetUrl ?? new Uri(string.Empty, UriKind.Relative));
+            mex.HttpsGetUrl = host.GetVia(Uri.UriSchemeHttps, _httpsGetUrl ?? new Uri(string.Empty, UriKind.Relative));
 
             UseRequestHeadersForMetadataAddressBehavior dynamicUpdateBehavior = description.Behaviors.Find<UseRequestHeadersForMetadataAddressBehavior>();
             if (dynamicUpdateBehavior != null)
@@ -149,8 +148,7 @@ namespace CoreWCF.Description
 
             foreach (ChannelDispatcherBase dispatcherBase in host.ChannelDispatchers)
             {
-                ChannelDispatcher dispatcher = dispatcherBase as ChannelDispatcher;
-                if (dispatcher != null && IsMetadataTransferDispatcher(description, dispatcher))
+                if (dispatcherBase is ChannelDispatcher dispatcher && IsMetadataTransferDispatcher(description, dispatcher))
                 {
                     mex.MexEnabled = true;
                     throw new NotImplementedException();
@@ -175,8 +173,7 @@ namespace CoreWCF.Description
         {
             for (int i = 0; i < channelDispatchers.Count; ++i)
             {
-                ChannelDispatcher channelDispatcher = channelDispatchers[i] as ChannelDispatcher;
-                if (channelDispatcher != null)
+                if (channelDispatchers[i] is ChannelDispatcher channelDispatcher)
                 {
                     for (int j = 0; j < channelDispatcher.Endpoints.Count; ++j)
                     {
@@ -190,44 +187,6 @@ namespace CoreWCF.Description
             }
 
             return null;
-        }
-
-        private static bool CompareOperations(SynchronizedKeyedCollection<string, DispatchOperation> dispatcherOperations, OperationDescriptionCollection contractOperations)
-        {
-            if (dispatcherOperations.Count != contractOperations.Count)
-            {
-                return false;
-            }
-
-            foreach(var contractOp in contractOperations)
-            {
-                if (!dispatcherOperations.Contains(contractOp.Name))
-                {
-                    return false;
-                }
-
-                var dispatchOp = dispatcherOperations[contractOp.Name];
-                if (contractOp.Messages[0].Action != dispatchOp.Action || (!contractOp.IsOneWay && contractOp.Messages[1].Action != dispatchOp.ReplyAction))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        internal static bool IsMetadataDispatcher(ServiceDescription description, ChannelDispatcher channelDispatcher)
-        {
-            foreach (EndpointDispatcher endpointDispatcher in channelDispatcher.Endpoints)
-            {
-                if (IsMetadataTransferDispatcher(description, channelDispatcher)
-                    || IsHttpGetMetadataDispatcher(description, channelDispatcher))
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         private static bool IsMetadataTransferDispatcher(ServiceDescription description, ChannelDispatcher channelDispatcher)
@@ -392,10 +351,12 @@ namespace CoreWCF.Description
                                     address = endpointDispatcher.EndpointAddress;
                                 }
 
-                                ServiceEndpoint exportedEndpoint = new ServiceEndpoint(endpoint.Contract);
-                                exportedEndpoint.Binding = endpoint.Binding;
-                                exportedEndpoint.Name = endpoint.Name;
-                                exportedEndpoint.Address = address;
+                                ServiceEndpoint exportedEndpoint = new ServiceEndpoint(endpoint.Contract)
+                                {
+                                    Binding = endpoint.Binding,
+                                    Name = endpoint.Name,
+                                    Address = address
+                                };
                                 foreach (IEndpointBehavior behavior in endpoint.EndpointBehaviors)
                                 {
                                     exportedEndpoint.EndpointBehaviors.Add(behavior);
@@ -405,8 +366,7 @@ namespace CoreWCF.Description
                             }
                         }
 
-                        WsdlExporter wsdlExporter = exporter as WsdlExporter;
-                        if (wsdlExporter != null)
+                        if (exporter is WsdlExporter wsdlExporter)
                         {
                             // Pass the BindingParameterCollection into the ExportEndpoints method so that the binding parameters can be using to export WSDL correctly.
                             // The binding parameters are used in BuildChannelListener, during which they can modify the configuration of the channel in ways that might have to

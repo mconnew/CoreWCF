@@ -89,7 +89,7 @@ namespace CoreWCF.Description
                 return;
             }
 
-            ServiceMetadataExtension mex = ServiceMetadataExtension.EnsureServiceMetadataExtension(description, serviceHostBase);
+            ServiceMetadataExtension mex = ServiceMetadataExtension.EnsureServiceMetadataExtension(serviceHostBase);
             SetExtensionProperties(mex, serviceHostBase);
         }
 

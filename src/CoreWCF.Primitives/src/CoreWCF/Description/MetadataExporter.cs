@@ -64,10 +64,10 @@ namespace CoreWCF.Description
 
         private sealed class ExportedPolicyConversionContext : PolicyConversionContext
         {
-            private PolicyAssertionCollection _bindingAssertions;
-            private Dictionary<OperationDescription, PolicyAssertionCollection> _operationBindingAssertions;
-            private Dictionary<MessageDescription, PolicyAssertionCollection> _messageBindingAssertions;
-            private Dictionary<FaultDescription, PolicyAssertionCollection> _faultBindingAssertions;
+            private readonly PolicyAssertionCollection _bindingAssertions;
+            private readonly Dictionary<OperationDescription, PolicyAssertionCollection> _operationBindingAssertions;
+            private readonly Dictionary<MessageDescription, PolicyAssertionCollection> _messageBindingAssertions;
+            private readonly Dictionary<FaultDescription, PolicyAssertionCollection> _faultBindingAssertions;
 
             internal ExportedPolicyConversionContext(ServiceEndpoint endpoint, BindingParameterCollection bindingParameters)
                 : base(endpoint)

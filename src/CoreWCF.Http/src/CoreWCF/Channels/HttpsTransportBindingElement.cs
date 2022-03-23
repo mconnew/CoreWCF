@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Net;
 using System.Net.Security;
 using System.Xml;
@@ -85,47 +86,14 @@ namespace CoreWCF.Channels
             var tsbe = context.BindingElements.Find<TransportSecurityBindingElement>();
             if (tsbe != null)
             {
-                if (tsbe.MessageSecurityVersion.SecurityPolicyVersion == Security.SecurityPolicyVersion.WSSecurityPolicy11)
-                {
-                    _transportTokenAssertion = CreateWsspAssertion(tsbe.MessageSecurityVersion.SecurityPolicyVersion, "HttpsToken"); // WSSecurityPolicy.HttpsTokenName
-                    _transportTokenAssertion.SetAttribute("RequireClientCertificate", // WSSecurityPolicy.RequireClientCertificateName
-                                        RequireClientCertificate ? "true" : "false");
-                }
-                else if (tsbe.MessageSecurityVersion.SecurityPolicyVersion == Security.SecurityPolicyVersion.WSSecurityPolicy12)
-                {
-                    var spv = tsbe.MessageSecurityVersion.SecurityPolicyVersion;
-                    _transportTokenAssertion = CreateWsspAssertion(spv, "HttpsToken"); // WSSecurityPolicy.HttpsTokenName
-                    if (RequireClientCertificate ||
-                        AuthenticationScheme == AuthenticationSchemes.Basic ||
-                        AuthenticationScheme == AuthenticationSchemes.Digest)
-                    {
-                        var doc = new XmlDocument();
-                        XmlElement policy = doc.CreateElement("wsp", // WspPrefix
-                                                              "Policy", // PolicyName
-                                                              exporter.PolicyVersion.Namespace);
-                        if (RequireClientCertificate)
-                        {
-                            policy.AppendChild(CreateWsspAssertion(spv, "RequireClientCertificate"));
-                        }
-                        if (AuthenticationScheme == AuthenticationSchemes.Basic)
-                        {
-                            policy.AppendChild(CreateWsspAssertion(spv, "HttpBasicAuthentication"));
-                        }
-                        else if (AuthenticationScheme == AuthenticationSchemes.Digest)
-                        {
-                            policy.AppendChild(CreateWsspAssertion(spv, "HttpDigestAuthentication"));
-                        }
-                        _transportTokenAssertion.AppendChild(policy);
-                    }
-                }
+                _transportTokenAssertion = CreateTransportTokenAssertion(tsbe.MessageSecurityVersion.SecurityPolicyVersion, exporter);
                 SecurityBindingElement.ExportPolicyForTransportTokenAssertionProviders(exporter, context);
                 _transportTokenAssertion = null;
             }
-
-            // The below code used to be in ExportPolicyForTransportTokenAssertionProviders but as it can't access this class,
-            // it's now been moved inline.
-            if (context.BindingElements.Find<TransportSecurityBindingElement>() == null)
+            else
             {
+                // The below code used to be in ExportPolicyForTransportTokenAssertionProviders but as it can't access this class,
+                // it's now been moved inline. This is the code that used to be executed before calling ExportTransportSecurityBindingElement
                 TransportSecurityBindingElement dummyTransportBindingElement = new TransportSecurityBindingElement();
                 if (context.BindingElements.Find<SecurityBindingElement>() == null)
                 {
@@ -139,8 +107,49 @@ namespace CoreWCF.Channels
                     dummyTransportBindingElement.MessageSecurityVersion = _messageSecurityVersion;
                 }
 
+                _transportTokenAssertion = CreateTransportTokenAssertion(dummyTransportBindingElement.MessageSecurityVersion.SecurityPolicyVersion, exporter);
                 SecurityBindingElement.ExportTransportSecurityBindingElement(dummyTransportBindingElement, this, exporter, context);
+                _transportTokenAssertion = null;
             }
+        }
+
+        private XmlElement CreateTransportTokenAssertion(Security.SecurityPolicyVersion securityPolicyVersion, MetadataExporter exporter)
+        {
+            XmlElement assertion = null;
+            if (securityPolicyVersion == Security.SecurityPolicyVersion.WSSecurityPolicy11)
+            {
+                assertion = CreateWsspAssertion(securityPolicyVersion, "HttpsToken"); // WSSecurityPolicy.HttpsTokenName
+                assertion.SetAttribute("RequireClientCertificate", // WSSecurityPolicy.RequireClientCertificateName
+                                    RequireClientCertificate ? "true" : "false");
+            }
+            else if (securityPolicyVersion == Security.SecurityPolicyVersion.WSSecurityPolicy12)
+            {
+                assertion = CreateWsspAssertion(securityPolicyVersion, "HttpsToken"); // WSSecurityPolicy.HttpsTokenName
+                if (RequireClientCertificate ||
+                    AuthenticationScheme == AuthenticationSchemes.Basic ||
+                    AuthenticationScheme == AuthenticationSchemes.Digest)
+                {
+                    var doc = new XmlDocument();
+                    XmlElement policy = doc.CreateElement("wsp", // WspPrefix
+                                                          "Policy", // PolicyName
+                                                          exporter.PolicyVersion.Namespace);
+                    if (RequireClientCertificate)
+                    {
+                        policy.AppendChild(CreateWsspAssertion(securityPolicyVersion, "RequireClientCertificate"));
+                    }
+                    if (AuthenticationScheme == AuthenticationSchemes.Basic)
+                    {
+                        policy.AppendChild(CreateWsspAssertion(securityPolicyVersion, "HttpBasicAuthentication"));
+                    }
+                    else if (AuthenticationScheme == AuthenticationSchemes.Digest)
+                    {
+                        policy.AppendChild(CreateWsspAssertion(securityPolicyVersion, "HttpDigestAuthentication"));
+                    }
+                    assertion.AppendChild(policy);
+                }
+            }
+
+            return assertion;
         }
 
         private XmlElement CreateWsspAssertion(Security.SecurityPolicyVersion policyVersion, string name)

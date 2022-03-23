@@ -111,8 +111,7 @@ namespace CoreWCF.Description
             else
             {
                 string hostUriString = string.Concat(listenUri.Scheme, "://", host);
-                Uri hostUri;
-                if (!Uri.TryCreate(hostUriString, UriKind.Absolute, out hostUri))
+                if (!Uri.TryCreate(hostUriString, UriKind.Absolute, out Uri hostUri))
                 {
                     return false;
                 }
@@ -123,10 +122,10 @@ namespace CoreWCF.Description
             return true;
         }
 
-        internal Action<IApplicationBuilder> ConfigureWith(Uri baseAddress, bool isHttps)
+        internal Func<RequestDelegate, RequestDelegate> CreateMiddleware(Uri baseAddress, bool isHttps)
         {
             HttpGetImpl impl = new HttpGetImpl(this, baseAddress, isHttps);
-            return impl.Configure;
+            return impl.MetadataMiddleware;
         }
 
         private void EnsureInitialized()
@@ -221,7 +220,7 @@ namespace CoreWCF.Description
             _owner = null;
         }
 
-        internal static ServiceMetadataExtension EnsureServiceMetadataExtension(ServiceDescription description, ServiceHostBase host)
+        internal static ServiceMetadataExtension EnsureServiceMetadataExtension(ServiceHostBase host)
         {
             ServiceMetadataExtension mex = host.Extensions.Find<ServiceMetadataExtension>();
             if (mex == null)
@@ -284,9 +283,7 @@ namespace CoreWCF.Description
 
         private DynamicAddressUpdateWriter GetDynamicAddressWriter(HttpRequest httpRequest, Uri listenUri, bool removeBaseAddress)
         {
-            string requestHost;
-            int requestPort;
-            if (!TryGetHttpHostAndPort(listenUri, httpRequest, out requestHost, out requestPort))
+            if (!TryGetHttpHostAndPort(listenUri, httpRequest, out string requestHost, out int requestPort))
             {
                 return null;
             }
@@ -306,15 +303,13 @@ namespace CoreWCF.Description
 
         private DynamicAddressUpdateWriter GetDynamicAddressWriter(Message request, Uri listenUri, bool removeBaseAddress)
         {
-            string requestHost;
-            int requestPort;
             HttpContext context = null;
             if (request.Properties.TryGetValue("Microsoft.AspNetCore.Http.HttpContext", out object contextObj))
             {
                 context = contextObj as HttpContext;
             }
 
-            if (context==null || !TryGetHttpHostAndPort(listenUri, context.Request, out requestHost, out requestPort))
+            if (context==null || !TryGetHttpHostAndPort(listenUri, context.Request, out string requestHost, out int requestPort))
             {
                 if (request.Headers.To == null)
                 {
@@ -417,8 +412,10 @@ namespace CoreWCF.Description
 
             public Message Get(Message request)
             {
-                GetResponse response = new GetResponse();
-                response.Metadata = GatherMetadata(null, null);
+                GetResponse response = new GetResponse
+                {
+                    Metadata = GatherMetadata(null, null)
+                };
 
                 response.Metadata.WriteFilter = _parent.GetWriteFilter(request, _listenUri, true);
 
@@ -510,7 +507,7 @@ namespace CoreWCF.Description
                 }
             }
 
-            private async Task<bool> TryHandleDocumentationRequestAsync(HttpContext requestContext, IQueryCollection queries)
+            private async Task<bool> TryHandleDocumentationRequestAsync(HttpContext requestContext)
             {
                 if (!HelpPageEnabled)
                 {
@@ -647,20 +644,19 @@ namespace CoreWCF.Description
                 }
 
                 // try to look the document up in the query table
-                object doc;
-                if (GetInitData().TryQueryLookup(query, out doc))
+                if (GetInitData().TryQueryLookup(query, out object doc))
                 {
-                    if (doc is WsdlNS.ServiceDescription)
+                    if (doc is WsdlNS.ServiceDescription description)
                     {
-                        result = new ServiceDescriptionResult((WsdlNS.ServiceDescription)doc, writeFilter);
+                        result = new ServiceDescriptionResult(description, writeFilter);
                     }
-                    else if (doc is XmlSchema)
+                    else if (doc is XmlSchema schema)
                     {
-                        result = new XmlSchemaResult((XmlSchema)doc, writeFilter);
+                        result = new XmlSchemaResult(schema, writeFilter);
                     }
-                    else if (doc is string)
+                    else if (doc is string @string)
                     {
-                        if (((string)doc) == DiscoToken)
+                        if (@string == DiscoToken)
                         {
                             result = CreateDiscoMessage(writeFilter as DynamicAddressUpdateWriter);
                         }
@@ -809,7 +805,7 @@ namespace CoreWCF.Description
                     return true;
                 }
 
-                if (await TryHandleDocumentationRequestAsync(requestContext, queries))
+                if (await TryHandleDocumentationRequestAsync(requestContext))
                 {
                     return true;
                 }
@@ -819,10 +815,10 @@ namespace CoreWCF.Description
 
             private class InitializationData
             {
-                private readonly Dictionary<string, object> docFromQuery;
-                private readonly Dictionary<object, string> queryFromDoc;
-                private readonly WsdlNS.ServiceDescriptionCollection wsdls;
-                private readonly XmlSchemaSet xsds;
+                private readonly Dictionary<string, object> _docFromQuery;
+                private readonly Dictionary<object, string> _queryFromDoc;
+                private readonly WsdlNS.ServiceDescriptionCollection _wsdls;
+                private readonly XmlSchemaSet _xsds;
 
                 public string ServiceName;
                 public string ClientName;
@@ -834,15 +830,15 @@ namespace CoreWCF.Description
                     WsdlNS.ServiceDescriptionCollection wsdls,
                     XmlSchemaSet xsds)
                 {
-                    this.docFromQuery = docFromQuery;
-                    this.queryFromDoc = queryFromDoc;
-                    this.wsdls = wsdls;
-                    this.xsds = xsds;
+                    _docFromQuery = docFromQuery;
+                    _queryFromDoc = queryFromDoc;
+                    _wsdls = wsdls;
+                    _xsds = xsds;
                 }
 
                 public bool TryQueryLookup(string query, out object doc)
                 {
-                    return docFromQuery.TryGetValue(query, out doc);
+                    return _docFromQuery.TryGetValue(query, out doc);
                 }
 
                 public static InitializationData InitializeFrom(ServiceMetadataExtension extension)
@@ -896,11 +892,12 @@ namespace CoreWCF.Description
                         queryFromDocInit.Add(DiscoToken, query);
                     }
 
-                    InitializationData data = new InitializationData(docFromQueryInit, queryFromDocInit, wsdls, xsds);
-
-                    data.DefaultWsdl = defaultWsdl;
-                    data.ServiceName = GetAnyWsdlName(wsdls);
-                    data.ClientName = ClientClassGenerator.GetClientClassName(GetAnyContractName(wsdls) ?? "IHello");
+                    InitializationData data = new InitializationData(docFromQueryInit, queryFromDocInit, wsdls, xsds)
+                    {
+                        DefaultWsdl = defaultWsdl,
+                        ServiceName = GetAnyWsdlName(wsdls),
+                        ClientName = ClientClassGenerator.GetClientClassName(GetAnyContractName(wsdls) ?? "IHello")
+                    };
 
                     return data;
                 }
@@ -910,9 +907,9 @@ namespace CoreWCF.Description
                     WsdlNS.ServiceDescriptionCollection wsdls = new WsdlNS.ServiceDescriptionCollection();
                     foreach (MetadataSection section in metadata.MetadataSections)
                     {
-                        if (section.Metadata is WsdlNS.ServiceDescription)
+                        if (section.Metadata is WsdlNS.ServiceDescription description)
                         {
-                            wsdls.Add((WsdlNS.ServiceDescription)section.Metadata);
+                            wsdls.Add(description);
                         }
                     }
 
@@ -921,13 +918,15 @@ namespace CoreWCF.Description
 
                 private static XmlSchemaSet CollectXsds(MetadataSet metadata)
                 {
-                    XmlSchemaSet xsds = new XmlSchemaSet();
-                    xsds.XmlResolver = null;
+                    XmlSchemaSet xsds = new XmlSchemaSet
+                    {
+                        XmlResolver = null
+                    };
                     foreach (MetadataSection section in metadata.MetadataSections)
                     {
-                        if (section.Metadata is XmlSchema)
+                        if (section.Metadata is XmlSchema schema)
                         {
-                            xsds.Add((XmlSchema)section.Metadata);
+                            xsds.Add(schema);
                         }
                     }
 
@@ -938,12 +937,12 @@ namespace CoreWCF.Description
                 {
                     // fixup imports and includes with addresses
                     // WSDLs
-                    foreach (WsdlNS.ServiceDescription wsdlDoc in wsdls)
+                    foreach (WsdlNS.ServiceDescription wsdlDoc in _wsdls)
                     {
                         FixImportAddresses(wsdlDoc);
                     }
                     // XSDs
-                    foreach (XmlSchema xsdDoc in xsds.Schemas())
+                    foreach (XmlSchema xsdDoc in _xsds.Schemas())
                     {
                         FixImportAddresses(xsdDoc);
                     }
@@ -958,10 +957,10 @@ namespace CoreWCF.Description
                             continue;
                         }
 
-                        WsdlNS.ServiceDescription targetDoc = wsdls[import.Namespace ?? string.Empty];
+                        WsdlNS.ServiceDescription targetDoc = _wsdls[import.Namespace ?? string.Empty];
                         if (targetDoc != null)
                         {
-                            string query = queryFromDoc[targetDoc];
+                            string query = _queryFromDoc[targetDoc];
                             import.Location = BaseAddressPattern + "?" + query;
                         }
                     }
@@ -979,19 +978,18 @@ namespace CoreWCF.Description
                 {
                     foreach (XmlSchemaObject o in xsdDoc.Includes)
                     {
-                        XmlSchemaExternal external = o as XmlSchemaExternal;
-                        if (external == null || !string.IsNullOrEmpty(external.SchemaLocation))
+                        if (!(o is XmlSchemaExternal external) || !string.IsNullOrEmpty(external.SchemaLocation))
                         {
                             continue;
                         }
 
-                        string targetNs = external is XmlSchemaImport ? ((XmlSchemaImport)external).Namespace : xsdDoc.TargetNamespace;
+                        string targetNs = external is XmlSchemaImport import ? import.Namespace : xsdDoc.TargetNamespace;
 
-                        foreach (XmlSchema targetXsd in xsds.Schemas(targetNs ?? string.Empty))
+                        foreach (XmlSchema targetXsd in _xsds.Schemas(targetNs ?? string.Empty))
                         {
                             if (targetXsd != xsdDoc)
                             {
-                                string query = queryFromDoc[targetXsd];
+                                string query = _queryFromDoc[targetXsd];
                                 external.SchemaLocation = BaseAddressPattern + "?" + query;
                                 break;
                             }
@@ -1052,23 +1050,20 @@ namespace CoreWCF.Description
                 }
             }
 
-            internal void Configure(IApplicationBuilder app)
+            internal RequestDelegate MetadataMiddleware(RequestDelegate _next)
             {
-                RequestDelegate MetadataMiddlewareImpl(RequestDelegate _next)
+                string path = _listenUri.AbsolutePath;
+                return async context =>
                 {
-                    return async httpContext =>
+                    if (context.Request.Path != path ||
+                        !await HandleRequest(context))
                     {
-                        if (!await HandleRequest(httpContext))
-                        {
-                            await _next(httpContext);
-                        }
-                    };
-                }
-
-                app.Use(MetadataMiddlewareImpl);
+                        await _next(context);
+                    }
+                };
             }
 
-            private async Task<bool> HandleRequest(HttpContext httpContext)
+            internal async Task<bool> HandleRequest(HttpContext httpContext)
             {
                 try
                 {
@@ -1234,147 +1229,147 @@ namespace CoreWCF.Description
 
                 private struct HelpPageWriter
                 {
-                    private readonly XmlWriter writer;
+                    private readonly XmlWriter _writer;
                     public HelpPageWriter(XmlWriter writer)
                     {
-                        this.writer = writer;
+                        _writer = writer;
                     }
 
                     internal void WriteClass(string className)
                     {
-                        writer.WriteStartElement("font");
-                        writer.WriteAttributeString("color", "black");
-                        writer.WriteString(className);
-                        writer.WriteEndElement(); // font
+                        _writer.WriteStartElement("font");
+                        _writer.WriteAttributeString("color", "black");
+                        _writer.WriteString(className);
+                        _writer.WriteEndElement(); // font
                     }
 
                     internal void WriteComment(string comment)
                     {
-                        writer.WriteStartElement("font");
-                        writer.WriteAttributeString("color", "darkgreen");
-                        writer.WriteString(comment);
-                        writer.WriteEndElement(); // font
+                        _writer.WriteStartElement("font");
+                        _writer.WriteAttributeString("color", "darkgreen");
+                        _writer.WriteString(comment);
+                        _writer.WriteEndElement(); // font
                     }
 
                     internal void WriteDiscoLink(string discoUrl)
                     {
-                        writer.WriteStartElement("link");
-                        writer.WriteAttributeString("rel", "alternate");
-                        writer.WriteAttributeString("type", "text/xml");
-                        writer.WriteAttributeString("href", discoUrl);
-                        writer.WriteEndElement(); // link
+                        _writer.WriteStartElement("link");
+                        _writer.WriteAttributeString("rel", "alternate");
+                        _writer.WriteAttributeString("type", "text/xml");
+                        _writer.WriteAttributeString("href", discoUrl);
+                        _writer.WriteEndElement(); // link
                     }
 
                     internal void WriteError(string message)
                     {
-                        writer.WriteStartElement("P");
-                        writer.WriteAttributeString("class", "intro");
-                        writer.WriteString(message);
-                        writer.WriteEndElement(); // P
+                        _writer.WriteStartElement("P");
+                        _writer.WriteAttributeString("class", "intro");
+                        _writer.WriteString(message);
+                        _writer.WriteEndElement(); // P
 
                     }
 
                     internal void WriteKeyword(string keyword)
                     {
-                        writer.WriteStartElement("font");
-                        writer.WriteAttributeString("color", "blue");
-                        writer.WriteString(keyword);
-                        writer.WriteEndElement(); // font
+                        _writer.WriteStartElement("font");
+                        _writer.WriteAttributeString("color", "blue");
+                        _writer.WriteString(keyword);
+                        _writer.WriteEndElement(); // font
                     }
 
                     internal void WriteSampleCode(string clientName)
                     {
-                        writer.WriteStartElement("P");
-                        writer.WriteAttributeString("class", "intro");
-                        writer.WriteRaw(SR.SFxDocExt_MainPageIntro2);
-                        writer.WriteEndElement(); // P
+                        _writer.WriteStartElement("P");
+                        _writer.WriteAttributeString("class", "intro");
+                        _writer.WriteRaw(SR.SFxDocExt_MainPageIntro2);
+                        _writer.WriteEndElement(); // P
 
                         // C#
-                        writer.WriteRaw("<h2 class='intro'>C#</h2><br />");
-                        writer.WriteStartElement("PRE");
+                        _writer.WriteRaw("<h2 class='intro'>C#</h2><br />");
+                        _writer.WriteStartElement("PRE");
                         WriteKeyword("class ");
                         WriteClass("Test\n");
-                        writer.WriteString("{\n");
+                        _writer.WriteString("{\n");
                         WriteKeyword("    static void ");
-                        writer.WriteString("Main()\n");
-                        writer.WriteString("    {\n");
-                        writer.WriteString("        ");
+                        _writer.WriteString("Main()\n");
+                        _writer.WriteString("    {\n");
+                        _writer.WriteString("        ");
                         WriteClass(clientName);
-                        writer.WriteString(" client = ");
+                        _writer.WriteString(" client = ");
                         WriteKeyword("new ");
                         WriteClass(clientName);
-                        writer.WriteString("();\n\n");
+                        _writer.WriteString("();\n\n");
                         WriteComment("        // " + SR.SFxDocExt_MainPageComment+ "\n\n");
                         WriteComment("        // " + SR.SFxDocExt_MainPageComment2+ "\n");
-                        writer.WriteString("        client.Close();\n");
-                        writer.WriteString("    }\n");
-                        writer.WriteString("}\n");
-                        writer.WriteEndElement(); // PRE
-                        writer.WriteRaw(HtmlBreak);
+                        _writer.WriteString("        client.Close();\n");
+                        _writer.WriteString("    }\n");
+                        _writer.WriteString("}\n");
+                        _writer.WriteEndElement(); // PRE
+                        _writer.WriteRaw(HtmlBreak);
 
 
                         // VB
-                        writer.WriteRaw("<h2 class='intro'>Visual Basic</h2><br />");
-                        writer.WriteStartElement("PRE");
+                        _writer.WriteRaw("<h2 class='intro'>Visual Basic</h2><br />");
+                        _writer.WriteStartElement("PRE");
                         WriteKeyword("Class ");
                         WriteClass("Test\n");
                         WriteKeyword("    Shared Sub ");
-                        writer.WriteString("Main()\n");
+                        _writer.WriteString("Main()\n");
                         WriteKeyword("        Dim ");
-                        writer.WriteString("client As ");
+                        _writer.WriteString("client As ");
                         WriteClass(clientName);
-                        writer.WriteString(" = ");
+                        _writer.WriteString(" = ");
                         WriteKeyword("New ");
                         WriteClass(clientName);
-                        writer.WriteString("()\n");
+                        _writer.WriteString("()\n");
                         WriteComment("        ' " + SR.SFxDocExt_MainPageComment+ "\n\n");
                         WriteComment("        ' " + SR.SFxDocExt_MainPageComment2+ "\n");
-                        writer.WriteString("        client.Close()\n");
+                        _writer.WriteString("        client.Close()\n");
                         WriteKeyword("    End Sub\n");
                         WriteKeyword("End Class");
-                        writer.WriteEndElement(); // PRE
+                        _writer.WriteEndElement(); // PRE
                     }
 
                     internal void WriteExceptionDetail(ExceptionDetail exceptionDetail)
                     {
-                        writer.WriteStartElement("PRE");
-                        writer.WriteString(exceptionDetail.ToString().Replace("\r", ""));
-                        writer.WriteEndElement(); // PRE
+                        _writer.WriteStartElement("PRE");
+                        _writer.WriteString(exceptionDetail.ToString().Replace("\r", ""));
+                        _writer.WriteEndElement(); // PRE
                     }
 
                     internal void WriteStyleSheet()
                     {
-                        writer.WriteStartElement("STYLE");
-                        writer.WriteAttributeString("type", "text/css");
-                        writer.WriteString("#content{ FONT-SIZE: 0.7em; PADDING-BOTTOM: 2em; MARGIN-LEFT: 30px}");
-                        writer.WriteString("BODY{MARGIN-TOP: 0px; MARGIN-LEFT: 0px; COLOR: #000000; FONT-FAMILY: Verdana; BACKGROUND-COLOR: white}");
-                        writer.WriteString("P{MARGIN-TOP: 0px; MARGIN-BOTTOM: 12px; COLOR: #000000; FONT-FAMILY: Verdana}");
-                        writer.WriteString("PRE{BORDER-RIGHT: #f0f0e0 1px solid; PADDING-RIGHT: 5px; BORDER-TOP: #f0f0e0 1px solid; MARGIN-TOP: -5px; PADDING-LEFT: 5px; FONT-SIZE: 1.2em; PADDING-BOTTOM: 5px; BORDER-LEFT: #f0f0e0 1px solid; PADDING-TOP: 5px; BORDER-BOTTOM: #f0f0e0 1px solid; FONT-FAMILY: Courier New; BACKGROUND-COLOR: #e5e5cc}");
-                        writer.WriteString(".heading1{MARGIN-TOP: 0px; PADDING-LEFT: 15px; FONT-WEIGHT: normal; FONT-SIZE: 26px; MARGIN-BOTTOM: 0px; PADDING-BOTTOM: 3px; MARGIN-LEFT: -30px; WIDTH: 100%; COLOR: #ffffff; PADDING-TOP: 10px; FONT-FAMILY: Tahoma; BACKGROUND-COLOR: #003366}");
-                        writer.WriteString(".intro{display: block; font-size: 1em;}");
-                        writer.WriteEndElement();
+                        _writer.WriteStartElement("STYLE");
+                        _writer.WriteAttributeString("type", "text/css");
+                        _writer.WriteString("#content{ FONT-SIZE: 0.7em; PADDING-BOTTOM: 2em; MARGIN-LEFT: 30px}");
+                        _writer.WriteString("BODY{MARGIN-TOP: 0px; MARGIN-LEFT: 0px; COLOR: #000000; FONT-FAMILY: Verdana; BACKGROUND-COLOR: white}");
+                        _writer.WriteString("P{MARGIN-TOP: 0px; MARGIN-BOTTOM: 12px; COLOR: #000000; FONT-FAMILY: Verdana}");
+                        _writer.WriteString("PRE{BORDER-RIGHT: #f0f0e0 1px solid; PADDING-RIGHT: 5px; BORDER-TOP: #f0f0e0 1px solid; MARGIN-TOP: -5px; PADDING-LEFT: 5px; FONT-SIZE: 1.2em; PADDING-BOTTOM: 5px; BORDER-LEFT: #f0f0e0 1px solid; PADDING-TOP: 5px; BORDER-BOTTOM: #f0f0e0 1px solid; FONT-FAMILY: Courier New; BACKGROUND-COLOR: #e5e5cc}");
+                        _writer.WriteString(".heading1{MARGIN-TOP: 0px; PADDING-LEFT: 15px; FONT-WEIGHT: normal; FONT-SIZE: 26px; MARGIN-BOTTOM: 0px; PADDING-BOTTOM: 3px; MARGIN-LEFT: -30px; WIDTH: 100%; COLOR: #ffffff; PADDING-TOP: 10px; FONT-FAMILY: Tahoma; BACKGROUND-COLOR: #003366}");
+                        _writer.WriteString(".intro{display: block; font-size: 1em;}");
+                        _writer.WriteEndElement();
                     }
 
                     internal void WriteTitle(string title)
                     {
-                        writer.WriteElementString("TITLE", title);
-                        writer.WriteEndElement();
-                        writer.WriteStartElement("BODY");
-                        writer.WriteStartElement("DIV");
-                        writer.WriteAttributeString("id", "content");
-                        writer.WriteAttributeString("role", "main");
-                        writer.WriteStartElement("h1");
-                        writer.WriteAttributeString("class", "heading1");
-                        writer.WriteString(title);
-                        writer.WriteEndElement();
-                        writer.WriteRaw(HtmlBreak);
+                        _writer.WriteElementString("TITLE", title);
+                        _writer.WriteEndElement();
+                        _writer.WriteStartElement("BODY");
+                        _writer.WriteStartElement("DIV");
+                        _writer.WriteAttributeString("id", "content");
+                        _writer.WriteAttributeString("role", "main");
+                        _writer.WriteStartElement("h1");
+                        _writer.WriteAttributeString("class", "heading1");
+                        _writer.WriteString(title);
+                        _writer.WriteEndElement();
+                        _writer.WriteRaw(HtmlBreak);
 
                     }
 
                     internal void WriteToolUsage(string wsdlUrl, string singleWsdlUrl, bool linkMetadata)
                     {
-                        writer.WriteStartElement("P");
-                        writer.WriteAttributeString("class", "intro");
+                        _writer.WriteStartElement("P");
+                        _writer.WriteAttributeString("class", "intro");
 
                         if (wsdlUrl != null)
                         {
@@ -1382,43 +1377,43 @@ namespace CoreWCF.Description
                             if (singleWsdlUrl != null)
                             {
                                 // ?singleWsdl message
-                                writer.WriteStartElement("P");
+                                _writer.WriteStartElement("P");
                                 WriteMetadataAddress(SR.SFxDocExt_MainPageIntroSingleWsdl, null, singleWsdlUrl, linkMetadata);
-                                writer.WriteEndElement();
+                                _writer.WriteEndElement();
                             }
                         }
                         else
                         {
                             // no metadata message
-                            writer.WriteRaw(SR.SFxDocExt_MainPageIntro1b);
+                            _writer.WriteRaw(SR.SFxDocExt_MainPageIntro1b);
                         }
-                        writer.WriteEndElement(); // P
+                        _writer.WriteEndElement(); // P
                     }
 
                     private void WriteMetadataAddress(string introductionText, string clientToolName, string wsdlUrl, bool linkMetadata)
                     {
-                        writer.WriteRaw(introductionText);
-                        writer.WriteRaw(HtmlBreak);
-                        writer.WriteStartElement("PRE");
+                        _writer.WriteRaw(introductionText);
+                        _writer.WriteRaw(HtmlBreak);
+                        _writer.WriteStartElement("PRE");
                         if (!string.IsNullOrEmpty(clientToolName))
                         {
-                            writer.WriteString(clientToolName);
+                            _writer.WriteString(clientToolName);
                         }
 
                         if (linkMetadata)
                         {
-                            writer.WriteStartElement("A");
-                            writer.WriteAttributeString("HREF", wsdlUrl);
+                            _writer.WriteStartElement("A");
+                            _writer.WriteAttributeString("HREF", wsdlUrl);
                         }
 
-                        writer.WriteString(wsdlUrl);
+                        _writer.WriteString(wsdlUrl);
 
                         if (linkMetadata)
                         {
-                            writer.WriteEndElement(); // A
+                            _writer.WriteEndElement(); // A
                         }
 
-                        writer.WriteEndElement(); // PRE
+                        _writer.WriteEndElement(); // PRE
                     }
                 }
             }
@@ -1674,7 +1669,6 @@ SR.SFxDocExt_NoMetadataSection5        ));
 
             public override void WriteString(string text)
             {
-                Uri uri;
                 if (_removeBaseAddress &&
                     text.StartsWith(BaseAddressPattern, StringComparison.Ordinal))
                 {
@@ -1685,7 +1679,7 @@ SR.SFxDocExt_NoMetadataSection5        ));
                 {
                     text = text.Replace(BaseAddressPattern, _newBaseAddress);
                 }
-                else if (Uri.TryCreate(text, UriKind.Absolute, out uri))
+                else if (Uri.TryCreate(text, UriKind.Absolute, out Uri uri))
                 {
                     Uri newUri = UpdateUri(uri);
                     if (newUri != null)
@@ -1714,8 +1708,10 @@ SR.SFxDocExt_NoMetadataSection5        ));
                     return null;
                 }
 
-                UriBuilder result = new UriBuilder(uri);
-                result.Host = _newHostName;
+                UriBuilder result = new UriBuilder(uri)
+                {
+                    Host = _newHostName
+                };
 
                 if (!updateBaseAddressOnly)
                 {

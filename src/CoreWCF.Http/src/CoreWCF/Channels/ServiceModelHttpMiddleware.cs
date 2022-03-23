@@ -161,7 +161,12 @@ namespace CoreWCF.Channels
                     }
 
                     _logger.LogInformation($"Mapping CoreWCF branch app for path {dispatcher.BaseAddress.AbsolutePath}");
-                    branchApp.Map(dispatcher.BaseAddress.AbsolutePath, wcfApp =>
+
+                    bool ExecHandler(HttpContext context) =>
+                        context.Request.Path == dispatcher.BaseAddress.AbsolutePath &&
+                        dispatcher.Binding.Scheme == context.Request.Scheme;
+
+                    branchApp.MapWhen(ExecHandler, wcfApp =>
                     {
                         IServiceScopeFactory servicesScopeFactory = wcfApp.ApplicationServices.GetRequiredService<IServiceScopeFactory>();
                         var requestHandler = new RequestDelegateHandler(serviceDispatcher, servicesScopeFactory);

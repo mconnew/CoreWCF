@@ -646,13 +646,13 @@ namespace CoreWCF.Channels
 
         protected static void SetIssuerBindingContextIfRequired(SecurityTokenParameters parameters, BindingContext issuerBindingContext)
         {
-            if (parameters is SslSecurityTokenParameters)
+            if (parameters is SslSecurityTokenParameters parameters1)
             {
-                ((SslSecurityTokenParameters)parameters).IssuerBindingContext = CreateIssuerBindingContextForNegotiation(issuerBindingContext);
+                parameters1.IssuerBindingContext = CreateIssuerBindingContextForNegotiation(issuerBindingContext);
             }
-            else if (parameters is SspiSecurityTokenParameters)
+            else if (parameters is SspiSecurityTokenParameters parameters2)
             {
-                ((SspiSecurityTokenParameters)parameters).IssuerBindingContext = CreateIssuerBindingContextForNegotiation(issuerBindingContext);
+                parameters2.IssuerBindingContext = CreateIssuerBindingContextForNegotiation(issuerBindingContext);
             }
         }
 
@@ -864,9 +864,9 @@ namespace CoreWCF.Channels
             {
                 foreach (BindingElement be in context.BindingElements)
                 {
-                    if (be is SecurityBindingElement)
+                    if (be is SecurityBindingElement element)
                     {
-                        binding = (SecurityBindingElement)be;
+                        binding = element;
                     }
                     else
                     {
@@ -874,9 +874,9 @@ namespace CoreWCF.Channels
                         {
                             bindingElementsBelowSecurity.Add(be);
                         }
-                        if (be is ITransportTokenAssertionProvider)
+                        if (be is ITransportTokenAssertionProvider provider)
                         {
-                            transportTokenAssertionProvider = (ITransportTokenAssertionProvider)be;
+                            transportTokenAssertionProvider = provider;
                         }
                     }
                 }
@@ -888,14 +888,14 @@ namespace CoreWCF.Channels
             bool hasCompletedSuccessfully = false;
             try
             {
-                if (binding is TransportSecurityBindingElement)
+                if (binding is TransportSecurityBindingElement element)
                 {
                     if (transportTokenAssertionProvider == null && !binding.AllowInsecureTransport)
                     {
                         throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new InvalidOperationException(SR.ExportOfBindingWithTransportSecurityBindingElementAndNoTransportSecurityNotSupported));
                     }
 
-                    ExportTransportSecurityBindingElement((TransportSecurityBindingElement)binding, transportTokenAssertionProvider, exporter, context);
+                    ExportTransportSecurityBindingElement(element, transportTokenAssertionProvider, exporter, context);
                     ExportOperationScopeSupportingTokensPolicy(binding, exporter, context);
                 }
                 else if (transportTokenAssertionProvider != null)
@@ -956,7 +956,8 @@ namespace CoreWCF.Channels
                     {
                         if (be.GetType().FullName.Equals("CoreWCF.Channels.HttpTransportBindingElement"))
                         {
-                            throw new Exception("Work out how to do this some other way");
+                            Fx.Assert("This could shouldn't be reachable");
+                            throw new NotSupportedException("WSDL generation for binding not supported");
                             //transportTokenAssertionProvider = new HttpsTransportBindingElement();
                             //break;
                         }
@@ -1057,14 +1058,14 @@ namespace CoreWCF.Channels
 
                         AddAssertionIfNotNull(policyContext, operation, sp.CreateWsspSupportingTokensAssertion(
                             exporter,
-                            requirements == null ? null : requirements.Signed,
-                            requirements == null ? null : requirements.SignedEncrypted,
-                            requirements == null ? null : requirements.Endorsing,
-                            requirements == null ? null : requirements.SignedEndorsing,
-                            optionalRequirements == null ? null : optionalRequirements.Signed,
-                            optionalRequirements == null ? null : optionalRequirements.SignedEncrypted,
-                            optionalRequirements == null ? null : optionalRequirements.Endorsing,
-                            optionalRequirements == null ? null : optionalRequirements.SignedEndorsing));
+                            requirements?.Signed,
+                            requirements?.SignedEncrypted,
+                            requirements?.Endorsing,
+                            requirements?.SignedEndorsing,
+                            optionalRequirements?.Signed,
+                            optionalRequirements?.SignedEncrypted,
+                            optionalRequirements?.Endorsing,
+                            optionalRequirements?.SignedEndorsing));
                     }
                 }
             }

@@ -15,7 +15,7 @@ namespace CoreWCF
 {
     public abstract class ServiceHostBase : CommunicationObject, IExtensibleObject<ServiceHostBase>, IDisposable
     {
-        internal static readonly Uri EmptyUri = new Uri(string.Empty, UriKind.RelativeOrAbsolute);
+        internal static readonly Uri s_emptyUri = new Uri(string.Empty, UriKind.RelativeOrAbsolute);
         private bool _initializeDescriptionHasFinished;
         private TimeSpan _closeTimeout = ServiceDefaults.ServiceHostCloseTimeout;
         private readonly ExtensionCollection<ServiceHostBase> _extensions;
@@ -300,7 +300,7 @@ namespace CoreWCF
 
         private ServiceDebugBehavior EnsureDebug(ServiceDescription description)
         {
-            Fx.Assert(this.State == CommunicationState.Created || this.State == CommunicationState.Opening, "");
+            Fx.Assert(State == CommunicationState.Created || State == CommunicationState.Opening, "");
             ServiceDebugBehavior m = description.Behaviors.Find<ServiceDebugBehavior>();
 
             if (m == null)

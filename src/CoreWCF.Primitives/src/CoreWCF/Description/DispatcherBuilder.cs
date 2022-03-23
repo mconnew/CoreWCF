@@ -85,7 +85,7 @@ namespace CoreWCF.Description
             if (listenUri == null)
             {
                 // TODO: Make sure the InternalBaseAddresses are populated with the relevant base address for the transport via DI
-                listenUri = GetVia(endpoint.Binding.Scheme, ServiceHostBase.EmptyUri, serviceHost.InternalBaseAddresses);
+                listenUri = GetVia(endpoint.Binding.Scheme, ServiceHostBase.s_emptyUri, serviceHost.InternalBaseAddresses);
             }
             if (listenUri == null)
             {
