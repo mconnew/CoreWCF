@@ -25,21 +25,10 @@ namespace CoreWCF.Runtime.Serialization
             [typeof(ulong)] = new XmlQualifiedName("unsignedLong", XmlSchema.Namespace)
         };
 
-        private DataContractEx(object dataContract, Type dataType)
+        private DataContractEx(object dataContract)
         {
-            WrappedDataContract = dataContract;
-            if (WrappedDataContract.GetType().Equals(s_enumDataContractType))
-            {
-                FixupEnumDataContract(dataType);
-            }
-        }
-
-        private void FixupEnumDataContract(Type dataType)
-        {
-            Fx.Assert(dataType.IsEnum, "EnumDataContract should only be created for an enum type");
-            var underlyingType = Enum.GetUnderlyingType(dataType);
-            var baseContractName = s_typeToName[underlyingType];
-            s_setEnumBaseContractName(WrappedDataContract, baseContractName);
+            WrappedDataContract = dataContract ?? throw new ArgumentNullException(nameof(dataContract));
+            Fx.Assert(DataContractType.IsAssignableFrom(dataContract.GetType()), "Only types derived from DataContract can be wrapped");
         }
 
         public object WrappedDataContract { get; }
@@ -67,11 +56,24 @@ namespace CoreWCF.Runtime.Serialization
         private static Func<object, XmlSchemaType> s_getXmlDataContractXsdType = ReflectionHelper.GetPropertyDelegate<XmlSchemaType>(s_xmlDataContractType, "XsdType");
         private static Action<object, XmlQualifiedName> s_setEnumBaseContractName = ReflectionHelper.SetPropertyDelegate<XmlQualifiedName>(s_enumDataContractType, "BaseContractName");
 
+        internal static void FixupEnumDataContract(object dataContract)
+        {
+            if (dataContract.GetType().Equals(s_enumDataContractType))
+            {
+                var wrapped = new DataContractEx(dataContract);
+                var dataType = wrapped.UnderlyingType; // Type that DataContract is for
+                Fx.Assert(dataType.IsEnum, "EnumDataContract should only be created for an enum type");
+                var underlyingType = Enum.GetUnderlyingType(dataType); // The underlying integer type backing the Enum
+                var baseContractName = s_typeToName[underlyingType];
+                s_setEnumBaseContractName(dataContract, baseContractName);
+            }
+        }
+
         private static DataContractEx GetDataContractStub(Type clrType)
         {
             var methodInfo = DataContractType.GetMethod("GetDataContract", BindingFlags.Static | BindingFlags.NonPublic, null, new Type[] { typeof(Type) }, null);
             var getDataContractDelegate = ReflectionHelper.CreateStaticMethodCallLambda<Type, object>(methodInfo);
-            Func<Type, DataContractEx> wrappingDelegate = (Type type) => new DataContractEx(getDataContractDelegate(type), type);
+            Func<Type, DataContractEx> wrappingDelegate = (Type type) => new DataContractEx(getDataContractDelegate(type));
             GetDataContract = wrappingDelegate;
             return GetDataContract(clrType);
         }

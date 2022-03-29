@@ -3,27 +3,27 @@
   <wsdl:types>
     <xs:schema elementFormDefault="qualified" targetNamespace="http://tempuri.org/" xmlns:xs="http://www.w3.org/2001/XMLSchema">
       <xs:import namespace="http://schemas.datacontract.org/2004/07/ServiceContract"/>
-      <xs:element name="Accept">
+      <xs:element name="AcceptWrapped">
         <xs:complexType>
           <xs:sequence>
-            <xs:element minOccurs="0" name="accept" type="q1:TestEnum" xmlns:q1="http://schemas.datacontract.org/2004/07/ServiceContract"/>
+            <xs:element minOccurs="0" name="accept" nillable="true" type="q1:TestWrappedEnum" xmlns:q1="http://schemas.datacontract.org/2004/07/ServiceContract"/>
           </xs:sequence>
         </xs:complexType>
       </xs:element>
-      <xs:element name="AcceptResponse">
+      <xs:element name="AcceptWrappedResponse">
         <xs:complexType>
           <xs:sequence/>
         </xs:complexType>
       </xs:element>
-      <xs:element name="Request">
+      <xs:element name="RequestWrapped">
         <xs:complexType>
           <xs:sequence/>
         </xs:complexType>
       </xs:element>
-      <xs:element name="RequestResponse">
+      <xs:element name="RequestWrappedResponse">
         <xs:complexType>
           <xs:sequence>
-            <xs:element minOccurs="0" name="RequestResult" type="q2:TestEnum" xmlns:q2="http://schemas.datacontract.org/2004/07/ServiceContract"/>
+            <xs:element minOccurs="0" name="RequestWrappedResult" nillable="true" type="q2:TestWrappedEnum" xmlns:q2="http://schemas.datacontract.org/2004/07/ServiceContract"/>
           </xs:sequence>
         </xs:complexType>
       </xs:element>
@@ -71,6 +71,12 @@
     </xs:schema>
     <xs:schema elementFormDefault="qualified" targetNamespace="http://schemas.datacontract.org/2004/07/ServiceContract" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://schemas.datacontract.org/2004/07/ServiceContract">
       <xs:import namespace="http://schemas.microsoft.com/2003/10/Serialization/"/>
+      <xs:complexType name="TestWrappedEnum">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="Enum" type="tns:TestEnum"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:element name="TestWrappedEnum" nillable="true" type="tns:TestWrappedEnum"/>
       <xs:simpleType name="TestEnum">
         <xs:restriction base="xs:string">
           <xs:enumeration value="One">
@@ -106,32 +112,32 @@
       <xs:element name="TestEnum" nillable="true" type="tns:TestEnum"/>
     </xs:schema>
   </wsdl:types>
-  <wsdl:message name="EnumService_Accept_InputMessage">
-    <wsdl:part name="parameters" element="tns:Accept"/>
+  <wsdl:message name="EnumService_AcceptWrapped_InputMessage">
+    <wsdl:part name="parameters" element="tns:AcceptWrapped"/>
   </wsdl:message>
-  <wsdl:message name="EnumService_Accept_OutputMessage">
-    <wsdl:part name="parameters" element="tns:AcceptResponse"/>
+  <wsdl:message name="EnumService_AcceptWrapped_OutputMessage">
+    <wsdl:part name="parameters" element="tns:AcceptWrappedResponse"/>
   </wsdl:message>
-  <wsdl:message name="EnumService_Request_InputMessage">
-    <wsdl:part name="parameters" element="tns:Request"/>
+  <wsdl:message name="EnumService_RequestWrapped_InputMessage">
+    <wsdl:part name="parameters" element="tns:RequestWrapped"/>
   </wsdl:message>
-  <wsdl:message name="EnumService_Request_OutputMessage">
-    <wsdl:part name="parameters" element="tns:RequestResponse"/>
+  <wsdl:message name="EnumService_RequestWrapped_OutputMessage">
+    <wsdl:part name="parameters" element="tns:RequestWrappedResponse"/>
   </wsdl:message>
   <wsdl:portType name="EnumService">
-    <wsdl:operation name="Accept">
-      <wsdl:input wsaw:Action="http://tempuri.org/EnumService/Accept" message="tns:EnumService_Accept_InputMessage"/>
-      <wsdl:output wsaw:Action="http://tempuri.org/EnumService/AcceptResponse" message="tns:EnumService_Accept_OutputMessage"/>
+    <wsdl:operation name="AcceptWrapped">
+      <wsdl:input wsaw:Action="http://tempuri.org/EnumService/AcceptWrapped" message="tns:EnumService_AcceptWrapped_InputMessage"/>
+      <wsdl:output wsaw:Action="http://tempuri.org/EnumService/AcceptWrappedResponse" message="tns:EnumService_AcceptWrapped_OutputMessage"/>
     </wsdl:operation>
-    <wsdl:operation name="Request">
-      <wsdl:input wsaw:Action="http://tempuri.org/EnumService/Request" message="tns:EnumService_Request_InputMessage"/>
-      <wsdl:output wsaw:Action="http://tempuri.org/EnumService/RequestResponse" message="tns:EnumService_Request_OutputMessage"/>
+    <wsdl:operation name="RequestWrapped">
+      <wsdl:input wsaw:Action="http://tempuri.org/EnumService/RequestWrapped" message="tns:EnumService_RequestWrapped_InputMessage"/>
+      <wsdl:output wsaw:Action="http://tempuri.org/EnumService/RequestWrappedResponse" message="tns:EnumService_RequestWrapped_OutputMessage"/>
     </wsdl:operation>
   </wsdl:portType>
   <wsdl:binding name="BasicHttpBinding_EnumService" type="tns:EnumService">
     <soap:binding transport="http://schemas.xmlsoap.org/soap/http"/>
-    <wsdl:operation name="Accept">
-      <soap:operation soapAction="http://tempuri.org/EnumService/Accept" style="document"/>
+    <wsdl:operation name="AcceptWrapped">
+      <soap:operation soapAction="http://tempuri.org/EnumService/AcceptWrapped" style="document"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>
@@ -139,8 +145,8 @@
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="Request">
-      <soap:operation soapAction="http://tempuri.org/EnumService/Request" style="document"/>
+    <wsdl:operation name="RequestWrapped">
+      <soap:operation soapAction="http://tempuri.org/EnumService/RequestWrapped" style="document"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>

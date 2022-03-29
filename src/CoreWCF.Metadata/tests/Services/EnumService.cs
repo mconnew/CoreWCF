@@ -8,7 +8,7 @@ namespace Services
 {
     public class EnumService : IEnumService
     {
-        public void Accept(TestEnum accept) => throw new NotImplementedException();
-        public TestEnum Request() => throw new NotImplementedException();
+        public void AcceptWrapped(TestWrappedEnum accept) => throw new NotImplementedException();
+        public TestWrappedEnum RequestWrapped() => throw new NotImplementedException();
     }
 }

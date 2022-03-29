@@ -15,8 +15,6 @@ namespace CoreWCF.Runtime.Serialization
 {
     internal class DataContractSetEx
     {
-        private static Type s_dataContractSetType = typeof(DataContractSerializer).Assembly.GetType("System.Runtime.Serialization.DataContractSet");
-
         internal DataContractSetEx()
         {
             Wrapped = FormatterServices.GetUninitializedObject(s_dataContractSetType);
@@ -33,6 +31,8 @@ namespace CoreWCF.Runtime.Serialization
 
         public object Wrapped { get; }
 
+        public IDictionary Contracts => s_getContracts(Wrapped);
+
         internal void Add(Type type)
         {
             var dataContract = DataContractEx.GetDataContract(type);
@@ -47,6 +47,15 @@ namespace CoreWCF.Runtime.Serialization
                 throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new InvalidDataContractException(SR.Format(SR.GenericTypeNotExportable, type)));
         }
 
-        //#endregion
+        internal void FixupEnumDataContracts()
+        {
+            foreach(object contractObj in Contracts.Values)
+            {
+                DataContractEx.FixupEnumDataContract(contractObj);
+            }
+        }
+
+        private static Type s_dataContractSetType = typeof(DataContractSerializer).Assembly.GetType("System.Runtime.Serialization.DataContractSet");
+        private static Func<object, IDictionary> s_getContracts = ReflectionHelper.GetPropertyDelegate<IDictionary>(s_dataContractSetType, "Contracts");
     }
 }
