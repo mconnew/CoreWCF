@@ -29,7 +29,7 @@ namespace CoreWCF.Channels.Framing
             if (value < 0)
             {
                 throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(value), value,
-                    SR.ValueMustBeNonNegative));
+                    SRCommon.ValueMustBeNonNegative));
             }
 
             int count = 1;

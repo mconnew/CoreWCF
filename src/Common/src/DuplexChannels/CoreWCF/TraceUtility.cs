@@ -6,7 +6,7 @@ using CoreWCF.Channels;
 
 namespace CoreWCF
 {
-    internal static class TraceUtility
+    internal static partial class TraceUtility
     {
         internal static Exception ThrowHelperError(Exception exception, Message message)
         {

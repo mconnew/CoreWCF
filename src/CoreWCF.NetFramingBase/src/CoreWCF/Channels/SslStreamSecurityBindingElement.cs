@@ -144,7 +144,7 @@ namespace CoreWCF.Channels
 
         private static class TransportPolicyConstants
         {
-            public const string DotNetFramingNamespace = FramingEncodingString.NamespaceUri + "/policy";
+            public const string DotNetFramingNamespace = Framing.FramingEncodingString.NamespaceUri + "/policy";
             public const string DotNetFramingPrefix = "msf";
             public const string RequireClientCertificateName = "RequireClientCertificate";
             public const string SslTransportSecurityName = "SslTransportSecurity";

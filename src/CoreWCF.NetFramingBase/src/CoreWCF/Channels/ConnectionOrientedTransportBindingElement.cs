@@ -5,13 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Xml;
-using WsdlNS = System.Web.Services.Description;
 using CoreWCF.Description;
 using CoreWCF.Runtime;
 
 namespace CoreWCF.Channels
 {
-    // TODO: Consider moving to primitives
     public abstract class ConnectionOrientedTransportBindingElement : TransportBindingElement, IWsdlExportExtension, IPolicyExportExtension
     {
         private int _connectionBufferSize;
@@ -52,7 +50,6 @@ namespace CoreWCF.Channels
             _maxOutputDelay = elementToBeCloned._maxOutputDelay;
             _maxPendingAccepts = elementToBeCloned._maxPendingAccepts;
             _transferMode = elementToBeCloned._transferMode;
-            IsMaxPendingConnectionsSet = elementToBeCloned.IsMaxPendingConnectionsSet;
             IsMaxPendingAcceptsSet = elementToBeCloned.IsMaxPendingAcceptsSet;
         }
 
@@ -68,7 +65,7 @@ namespace CoreWCF.Channels
                 if (value < 0)
                 {
                     throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(value), value,
-                        SR.ValueMustBeNonNegative));
+                        SRCommon.ValueMustBeNonNegative));
                 }
 
                 _connectionBufferSize = value;
@@ -115,7 +112,7 @@ namespace CoreWCF.Channels
                 if (value <= 0)
                 {
                     throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(value), value,
-                        SR.ValueMustBePositive));
+                        SRCommon.ValueMustBePositive));
                 }
 
                 _maxBufferSizeInitialized = true;
@@ -134,11 +131,10 @@ namespace CoreWCF.Channels
                 if (value <= 0)
                 {
                     throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(value), value,
-                        SR.ValueMustBePositive));
+                        SRCommon.ValueMustBePositive));
                 }
 
                 _maxPendingConnections = value;
-                IsMaxPendingConnectionsSet = true;
             }
         }
 
@@ -159,13 +155,13 @@ namespace CoreWCF.Channels
                 if (value <= TimeSpan.Zero)
                 {
                     throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(value), value,
-                        SR.TimeSpanMustBeGreaterThanTimeSpanZero));
+                        SRCommon.TimeSpanMustBeGreaterThanTimeSpanZero));
                 }
 
                 if (TimeoutHelper.IsTooLarge(value))
                 {
                     throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(value), value,
-                        SR.SFxTimeoutOutOfRangeTooBig));
+                        SRCommon.SFxTimeoutOutOfRangeTooBig));
                 }
 
                 _channelInitializationTimeout = value;
@@ -184,13 +180,13 @@ namespace CoreWCF.Channels
                 if (value < TimeSpan.Zero)
                 {
                     throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(value), value,
-                        SR.SFxTimeoutOutOfRange0));
+                        SRCommon.SFxTimeoutOutOfRange0));
                 }
 
                 if (TimeoutHelper.IsTooLarge(value))
                 {
                     throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(value), value,
-                        SR.SFxTimeoutOutOfRangeTooBig));
+                        SRCommon.SFxTimeoutOutOfRangeTooBig));
                 }
 
                 _maxOutputDelay = value;
@@ -209,7 +205,7 @@ namespace CoreWCF.Channels
                 if (value <= 0)
                 {
                     throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(value), value,
-                        SR.ValueMustBePositive));
+                        SRCommon.ValueMustBePositive));
                 }
 
                 _maxPendingAccepts = value;

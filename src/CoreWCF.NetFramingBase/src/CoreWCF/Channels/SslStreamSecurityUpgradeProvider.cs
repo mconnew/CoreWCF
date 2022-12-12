@@ -221,7 +221,7 @@ namespace CoreWCF.Channels
         private ChannelBinding _channelBindingToken;
 
         public SslStreamSecurityUpgradeAcceptor(SslStreamSecurityUpgradeProvider parent)
-            : base(FramingUpgradeString.SslOrTls)
+            : base(Framing.FramingUpgradeString.SslOrTls)
         {
             _parent = parent;
             _clientSecurity = new SecurityMessageProperty();

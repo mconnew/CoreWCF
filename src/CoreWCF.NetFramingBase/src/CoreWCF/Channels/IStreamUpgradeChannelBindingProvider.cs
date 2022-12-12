@@ -5,7 +5,7 @@ using System.Security.Authentication.ExtendedProtection;
 
 namespace CoreWCF.Channels
 {
-    internal interface IStreamUpgradeChannelBindingProvider : IChannelBindingProvider
+    public interface IStreamUpgradeChannelBindingProvider : IChannelBindingProvider
     {
         ChannelBinding GetChannelBinding(StreamUpgradeAcceptor upgradeAcceptor, ChannelBindingKind kind);
     }

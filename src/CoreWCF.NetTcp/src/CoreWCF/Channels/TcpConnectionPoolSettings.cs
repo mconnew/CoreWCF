@@ -50,13 +50,13 @@ namespace CoreWCF.Channels
                 if (value < TimeSpan.Zero)
                 {
                     throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(IdleTimeout), value,
-                        SR.SFxTimeoutOutOfRange0));
+                        SRCommon.SFxTimeoutOutOfRange0));
                 }
 
                 if (TimeoutHelper.IsTooLarge(value))
                 {
                     throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(IdleTimeout), value,
-                        SR.SFxTimeoutOutOfRangeTooBig));
+                        SRCommon.SFxTimeoutOutOfRangeTooBig));
                 }
 
                 _idleTimeout = value;
@@ -71,13 +71,13 @@ namespace CoreWCF.Channels
         //        if (value < TimeSpan.Zero)
         //        {
         //            throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException("value", value,
-        //                SR.GetString(SR.SFxTimeoutOutOfRange0)));
+        //                SR.GetString(SRCommon.SFxTimeoutOutOfRange0)));
         //        }
 
         //        if (TimeoutHelper.IsTooLarge(value))
         //        {
         //            throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException("value", value,
-        //                SR.GetString(SR.SFxTimeoutOutOfRangeTooBig)));
+        //                SR.GetString(SRCommon.SFxTimeoutOutOfRangeTooBig)));
         //        }
 
         //        _leaseTimeout = value;
@@ -92,7 +92,7 @@ namespace CoreWCF.Channels
                 if (value < 0)
                 {
                     throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(MaxOutboundConnectionsPerEndpoint), value,
-                        SR.ValueMustBeNonNegative));
+                        SRCommon.ValueMustBeNonNegative));
                 }
 
                 _maxOutboundConnectionsPerEndpoint = value;

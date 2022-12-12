@@ -19,5 +19,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\CoreWCF.Primitives\src\CoreWCF.Primitives.csproj" />
+    <ProjectReference Include="..\..\CoreWCF.NetFramingBase\src\CoreWCF.NetFramingBase.csproj" />
   </ItemGroup>
 </Project>

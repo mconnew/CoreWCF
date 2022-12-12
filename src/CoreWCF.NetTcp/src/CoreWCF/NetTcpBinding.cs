@@ -60,11 +60,6 @@ namespace CoreWCF
             }
         }
 
-        internal bool IsMaxConnectionsSet
-        {
-            get { return _transport.IsMaxPendingConnectionsSet; }
-        }
-
         public int ListenBacklog
         {
             get { return _transport.ListenBacklog; }
