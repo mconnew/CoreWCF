@@ -248,6 +248,7 @@ namespace CoreWCF.Channels.Framing
             connection.RawStream = duplexPipeStream;
             StreamUpgradeAcceptor upgradeAcceptor = connection.StreamUpgradeAcceptor;
             Stream stream = await upgradeAcceptor.AcceptUpgradeAsync(connection.RawStream);
+
             duplexPipeStream.SetContentType(contentType);
             CreatePipelineFromStream(connection, stream);
         }

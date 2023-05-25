@@ -1,0 +1,144 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System.ComponentModel;
+using System.Xml;
+using CoreWCF.Channels;
+
+namespace CoreWCF
+{
+    public class UnixDomainSocketBinding : Binding
+    {
+        // private BindingElements
+        private UnixDomainSocketTransportBindingElement _transport;
+        private BinaryMessageEncodingBindingElement _encoding;
+        private UnixDomainSocketSecurity _security = new UnixDomainSocketSecurity();
+
+        public UnixDomainSocketBinding() { Initialize(); }
+        public UnixDomainSocketBinding(SecurityMode securityMode)
+            : this()
+        {
+            _security.Mode = securityMode;
+        }
+
+        public TransferMode TransferMode
+        {
+            get { return _transport.TransferMode; }
+            set { _transport.TransferMode = value; }
+        }
+
+        public HostNameComparisonMode HostNameComparisonMode
+        {
+            get { return _transport.HostNameComparisonMode; }
+            set { _transport.HostNameComparisonMode = value; }
+        }
+
+        [DefaultValue(TransportDefaults.MaxBufferPoolSize)]
+        public long MaxBufferPoolSize
+        {
+            get { return _transport.MaxBufferPoolSize; }
+            set
+            {
+                _transport.MaxBufferPoolSize = value;
+            }
+        }
+
+        public int MaxBufferSize
+        {
+            get { return _transport.MaxBufferSize; }
+            set { _transport.MaxBufferSize = value; }
+        }
+
+        public int MaxConnections
+        {
+            get { return _transport.MaxPendingConnections; }
+            set
+            {
+                _transport.MaxPendingConnections = value;
+            }
+        }
+
+        public int ListenBacklog
+        {
+            get { return _transport.ListenBacklog; }
+            set { _transport.ListenBacklog = value; }
+        }
+
+        public long MaxReceivedMessageSize
+        {
+            get { return _transport.MaxReceivedMessageSize; }
+            set { _transport.MaxReceivedMessageSize = value; }
+        }
+
+        public XmlDictionaryReaderQuotas ReaderQuotas
+        {
+            get { return _encoding.ReaderQuotas; }
+            set
+            {
+                if (value == null)
+                {
+                    throw DiagnosticUtility.ExceptionUtility.ThrowHelperArgumentNull(nameof(value));
+                }
+
+                value.CopyTo(_encoding.ReaderQuotas);
+            }
+        }
+
+        //TODO: Work out if we want IBindingRuntimePreferences. Probably not as we're aiming for 100% async here
+        //bool IBindingRuntimePreferences.ReceiveSynchronously
+        //{
+        //    get { return false; }
+        //}
+
+        public override string Scheme { get { return _transport.Scheme; } }
+
+        public EnvelopeVersion EnvelopeVersion
+        {
+            get { return EnvelopeVersion.Soap12; }
+        }
+
+        public UnixDomainSocketSecurity Security
+        {
+            get { return _security; }
+            set
+            {
+                _security = value ?? throw DiagnosticUtility.ExceptionUtility.ThrowHelperArgumentNull(nameof(value));
+            }
+        }
+
+        private void Initialize()
+        {
+            _transport = new UnixDomainSocketTransportBindingElement();
+            _encoding = new BinaryMessageEncodingBindingElement();
+        }
+
+        public override BindingElementCollection CreateBindingElements()
+        {
+            // return collection of BindingElements
+            BindingElementCollection bindingElements = new BindingElementCollection
+            {
+                // order of BindingElements is important
+                // add encoding
+                _encoding
+            };
+           
+            // add transport security
+            BindingElement transportSecurity = CreateTransportSecurity();
+            if (transportSecurity != null)
+            {
+                bindingElements.Add(transportSecurity);
+            }
+            // TODO: Add ExtendedProtectionPolicy
+            _transport.ExtendedProtectionPolicy = _security.Transport.ExtendedProtectionPolicy;
+            // add transport (tcp)
+            bindingElements.Add(_transport);
+
+            return bindingElements.Clone();
+        }
+
+        private BindingElement CreateTransportSecurity()
+        {
+            return _security.CreateTransportSecurity();
+        }
+    }
+}
