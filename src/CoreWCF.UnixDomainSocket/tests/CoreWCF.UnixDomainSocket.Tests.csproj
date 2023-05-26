@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk" ToolsVersion="15.0">
   <PropertyGroup>
     <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
-    <TargetFrameworks Condition="'$(OS)' == 'Windows_NT'">$(TargetFrameworks);net472</TargetFrameworks>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
@@ -37,14 +36,14 @@
     <ProjectReference Include="..\src\CoreWCF.UnixDomainSocket.csproj" />
     <ProjectReference Include="$(SourceDir)CoreWCF.Primitives\src\CoreWCF.Primitives.csproj" />
   </ItemGroup>
-<ItemGroup>
+<!--<ItemGroup>
   <Reference Include="System.ServiceModel.UnixDomainSocket">
     <HintPath>/Users/biroj/Documents/WCFClient/wcf/artifacts/bin/System.ServiceModel.UnixDomainSocket/Debug/net6.0/System.ServiceModel.UnixDomainSocket.dll</HintPath>
   </Reference>
     <Reference Include="System.ServiceModel.Primitives">
   <HintPath>/Users/biroj/Documents/WCFClient/wcf/artifacts/bin/System.ServiceModel.UnixDomainSocket/Debug/net6.0/System.ServiceModel.Primitives.dll</HintPath>
   </Reference>
-</ItemGroup>
+</ItemGroup>-->
   <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>

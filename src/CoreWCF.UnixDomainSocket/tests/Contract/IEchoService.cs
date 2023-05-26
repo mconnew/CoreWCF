@@ -11,13 +11,13 @@ namespace Contract
     }
 
     [CoreWCF.ServiceContract(Namespace = Constants.NS, Name = Constants.TESTSERVICE_NAME)]
-    [System.ServiceModel.ServiceContract(Namespace = Constants.NS, Name = Constants.TESTSERVICE_NAME)]
+    //[System.ServiceModel.ServiceContract(Namespace = Constants.NS, Name = Constants.TESTSERVICE_NAME)]
     public interface IEchoService
     {
         [CoreWCF.OperationContract(Name = "Echo", Action = Constants.OPERATION_BASE + "Echo",
             ReplyAction = Constants.OPERATION_BASE + "EchoResponse")]
-        [System.ServiceModel.OperationContract(Name = "Echo", Action = Constants.OPERATION_BASE + "Echo",
-            ReplyAction = Constants.OPERATION_BASE + "EchoResponse")]
+        //[System.ServiceModel.OperationContract(Name = "Echo", Action = Constants.OPERATION_BASE + "Echo",
+        //    ReplyAction = Constants.OPERATION_BASE + "EchoResponse")]
         string EchoString(string echo);
     }
 }

@@ -3,9 +3,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CoreWCF.Channels;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -72,5 +74,64 @@ namespace CoreWCF.Configuration
 
             return app;
         }
+
+        public static IHost UseServiceModel(this IHost host, Action<IServiceBuilder> configureServices)
+        {
+            if (host == null)
+            {
+                throw new ArgumentNullException(nameof(host));
+            }
+
+            host.Services.UseServiceModel(configureServices);
+            return host;
+        }
+
+        public static IServiceProvider UseServiceModel(this IServiceProvider serviceProvider, Action<IServiceBuilder> configureServices)
+        {
+            if (serviceProvider == null)
+            {
+                throw new ArgumentNullException(nameof(serviceProvider));
+            }
+
+            if (configureServices == null)
+            {
+                throw new ArgumentNullException(nameof(configureServices));
+            }
+
+            ServiceBuilder serviceBuilder = serviceProvider.GetService<ServiceBuilder>();
+            configureServices(serviceBuilder);
+            return UseServiceModel(serviceProvider);
+        }
+
+        public static IServiceProvider UseServiceModel(this IServiceProvider serviceProvider)
+        {
+            ServiceBuilder serviceBuilder = serviceProvider.GetRequiredService<ServiceBuilder>();
+            ILoggerFactory loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+
+            var options = serviceProvider.GetService<IOptions<ServiceModelOptions>>();
+            var serviceModelOptions = options.Value ?? new ServiceModelOptions();
+            serviceModelOptions.ConfigureServiceBuilder(serviceBuilder);
+
+            IEnumerable<ITransportServiceBuilder> transportServiceBuilders = serviceProvider.GetServices<ITransportServiceBuilder>();
+            if (transportServiceBuilders.Count() > 0)
+            {
+                throw new InvalidOperationException(SR.WebHostRequired);
+            }
+
+            foreach (IServiceConfiguration serviceConfig in serviceBuilder.ServiceConfigurations)
+            {
+                foreach (ServiceEndpointConfiguration serviceEndpoint in serviceConfig.Endpoints)
+                {
+                    ITransportServiceBuilder transportServiceBuilder = serviceEndpoint.Binding.GetProperty<ITransportServiceBuilder>(new BindingParameterCollection());
+                    if (transportServiceBuilder != null)
+                    {
+                        throw new InvalidOperationException(SR.WebHostRequired);
+                    }
+                }
+            }
+
+            return serviceProvider;
+        }
+
     }
 }

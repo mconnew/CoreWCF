@@ -30,7 +30,7 @@ namespace CoreWCF.Channels
         private KestrelServer _kestrel;
         private CancellationTokenRegistration _applicationStartedRegistration;
 
-        public UnixDomainSocketHostedService(IServiceBuilder serviceBuilder, ILogger<UnixDomainSocketHostedService> logger, IServer server, IServiceProvider serviceProvider)
+        public UnixDomainSocketHostedService(IServiceBuilder serviceBuilder, ILogger<UnixDomainSocketHostedService> logger, IServiceProvider serviceProvider)
         {
             // We request the IServer in the constructor to trigger the constructor of the implementation. If the implementation
             // is KestrelServer it will run NetTcpFramingOptionsSetup.Configure, which we use to detect the server is Kestrel.

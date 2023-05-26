@@ -15,24 +15,41 @@ using Xunit.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
+using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Helpers
 {
     public static class ServiceHelper
     {
-       
-        public static IHost CreateWebHostBuilder<TStartup>(ITestOutputHelper outputHelper = default, string linuxSocketFilepath = "", [CallerMemberName] string callerMethodName = "") where TStartup : class =>
-            Host.CreateDefaultBuilder(Array.Empty<string>())
-           
-            .UseUnixDomainSocket(options =>
+
+        public static IHost CreateWebHostBuilder<TStartup>(ITestOutputHelper outputHelper = default, string linuxSocketFilepath = "", [CallerMemberName] string callerMethodName = "") where TStartup : class
+        {
+            var startupType = typeof(TStartup);
+            var configureServicesMethod = startupType.GetMethod("ConfigureServices", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, new Type[] { typeof(IServiceCollection) });
+            var configureMethod = startupType.GetMethod("Configure", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, new Type[] { typeof(IHost) });
+            var startupInstance = Activator.CreateInstance(startupType);
+            var hostBuilder = Host.CreateDefaultBuilder(Array.Empty<string>());
+            hostBuilder.UseUnixDomainSocket(options =>
             {
-                options.Listen(new Uri("net.uds://"+ linuxSocketFilepath + "/"));
-            })
-            .ConfigureWebHostDefaults((buildeer => {
-                buildeer.UseStartup<TStartup>();
-            }))
-            .Build();
-        
+                options.Listen(new Uri("net.uds://" + linuxSocketFilepath + "/"));
+            });
+            if (configureServicesMethod != null)
+            {
+                var configureServiceAction = (Action<IServiceCollection>)configureServicesMethod.CreateDelegate(typeof(Action<IServiceCollection>), startupInstance);
+                hostBuilder.ConfigureServices(configureServiceAction);
+            }
+
+            IHost host = hostBuilder.Build();
+            if (configureMethod != null)
+            {
+                var configureAction = (Action<IHost>)configureMethod.CreateDelegate(typeof(Action<IHost>), startupInstance);
+                configureAction(host);
+            }
+
+            return host;
+        }
+
 
         //only for test, don't use in production code
         public static X509Certificate2 GetServiceCertificate()
@@ -73,36 +90,36 @@ namespace Helpers
             return foundCert;
         }
 
-        public static void CloseServiceModelObjects(params System.ServiceModel.ICommunicationObject[] objects)
-        {
-            foreach (System.ServiceModel.ICommunicationObject comObj in objects)
-            {
-                try
-                {
-                    if (comObj == null)
-                    {
-                        continue;
-                    }
-                    // Only want to call Close if it is in the Opened state
-                    if (comObj.State == System.ServiceModel.CommunicationState.Opened)
-                    {
-                        comObj.Close();
-                    }
-                    // Anything not closed by this point should be aborted
-                    if (comObj.State != System.ServiceModel.CommunicationState.Closed)
-                    {
-                        comObj.Abort();
-                    }
-                }
-                catch (TimeoutException)
-                {
-                    comObj.Abort();
-                }
-                catch (System.ServiceModel.CommunicationException)
-                {
-                    comObj.Abort();
-                }
-            }
-        }
+        //public static void CloseServiceModelObjects(params System.ServiceModel.ICommunicationObject[] objects)
+        //{
+        //    foreach (System.ServiceModel.ICommunicationObject comObj in objects)
+        //    {
+        //        try
+        //        {
+        //            if (comObj == null)
+        //            {
+        //                continue;
+        //            }
+        //            // Only want to call Close if it is in the Opened state
+        //            if (comObj.State == System.ServiceModel.CommunicationState.Opened)
+        //            {
+        //                comObj.Close();
+        //            }
+        //            // Anything not closed by this point should be aborted
+        //            if (comObj.State != System.ServiceModel.CommunicationState.Closed)
+        //            {
+        //                comObj.Abort();
+        //            }
+        //        }
+        //        catch (TimeoutException)
+        //        {
+        //            comObj.Abort();
+        //        }
+        //        catch (System.ServiceModel.CommunicationException)
+        //        {
+        //            comObj.Abort();
+        //        }
+        //    }
+        //}
     }
 }
