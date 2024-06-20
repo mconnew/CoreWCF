@@ -132,7 +132,7 @@ namespace CoreWCF.Channels.Framing
             else if ((upgradeBindingElements.Count == 1) && tbe.SupportsUpgrade(upgradeBindingElements[0]))
             {
                 SecurityCredentialsManager credentialsManager = dispatcher.Host.Description.Behaviors.Find<SecurityCredentialsManager>();
-                var bindingContext = new BindingContext(new CustomBinding(dispatcher.Binding), new BindingParameterCollection());
+                var bindingContext = new BindingContext(new CustomBinding(dispatcher.Binding), new BindingParameterCollection(), dispatcher.BaseAddress, string.Empty);
 
                 if (credentialsManager != null)
                     bindingContext.BindingParameters.Add(credentialsManager);
